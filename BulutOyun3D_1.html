@@ -95,7 +95,7 @@
   <div id="kelime">—</div>
   <div class="btnlar">
     <button class="b-dinle" onclick="kelimeyiSesliOku()">🔊 Dinle</button>
-    <button class="b-soyle" id="soyleBtn" onclick="dinlemeyeBasla()">🎤 Söyle</button>
+    <button class="b-soyle" id="soyleBtn" onclick="dinlemeyeBasla()" style="display:none">🎤 Söyle</button>
     <button class="b-gec" id="gecBtn" style="display:none" onclick="challengeGec()">➡️ Geç</button>
   </div>
   <div id="durum"></div>
@@ -405,7 +405,7 @@ function panelKapat(){ sesDur(); document.getElementById("panel").classList.remo
 
 function meydanBasarili(){
   const r=aktifRobot;
-  skor+=15; document.getElementById("skor").textContent=skor;
+  skor+=10; document.getElementById("skor").textContent=skor;
   const kills=(meydanBasarili._k=(meydanBasarili._k||0)+1);
   if(kills%2===0 && can<KAN_MAX){ can++; sagligiCiz(); mesajGoster("❤️ +1 Can!"); }
   document.getElementById("durum").innerHTML="✅ Harika!";
@@ -435,46 +435,67 @@ function sesleriCoz(){
   }
 }
 function sesDur(){ if("speechSynthesis"in window) speechSynthesis.cancel(); }
-function seslendir(metin){
+function seslendir(metin, bitince){
   if(!("speechSynthesis"in window))return;
   sesDur();
   if(!secilenSes) sesleriCoz();
   const u=new SpeechSynthesisUtterance(metin);
   u.lang="tr-TR"; u.rate=0.7; u.pitch=1.0;   // yavaş ve net, tek seferde tüm kelime
   if(secilenSes) u.voice=secilenSes;
+  if(bitince){ u.onend=()=>{ bitince(); }; }
   speechSynthesis.speak(u);
 }
-function kelimeyiSesliOku(){ if(aktifRobot) seslendir(aktifRobot.kelime); }
+function kelimeyiSesliOku(){ if(aktifRobot) seslendir(aktifRobot.kelime, dinlemeyeBasla); }
 
 /* ---- Konuşma tanıma ---- */
 const TanimaAPI=window.SpeechRecognition||window.webkitSpeechRecognition;
-let taniyici=null,dinliyor=false;
-function dinlemeyeBasla(){
-  if(!aktifRobot)return;
-  if(!TanimaAPI){
-    document.getElementById("durum").innerHTML="🎤 Bu tarayıcı mikrofonu desteklemiyor.<br>Chrome öneririm.";
-    document.getElementById("gecBtn").style.display="inline-block";return;
-  }
-  if(dinliyor)return;
-  if(!taniyici){
-    taniyici=new TanimaAPI();taniyici.lang="tr-TR";taniyici.interimResults=false;taniyici.maxAlternatives=5;
-    taniyici.onresult=e=>{
-    const sec=[];for(const a of e.results[0])sec.push(a.transcript);
+let taniyici=null,dinliyor=false,sonucGeldi=false,izinDenemesi=false,mikrofonReddedildi=false,sessizlikTimer=null;
+function taniyiciKur(){
+  taniyici=new TanimaAPI(); taniyici.lang="tr-TR"; taniyici.interimResults=false; taniyici.maxAlternatives=5;
+  taniyici.onresult=e=>{
+    sonucGeldi=true;
+    const sec=[]; for(const a of e.results[0]) sec.push(a.transcript);
     document.getElementById("duydum").textContent="duyduğum: "+sec[0];
-    if(sec.some(s=>eslesiyorMu(s,aktifRobot.kelime))) meydanBasarili();
-    else{
+    if(aktifRobot && sec.some(s=>eslesiyorMu(s,aktifRobot.kelime))) meydanBasarili();
+    else if(aktifRobot){
       deneme++;
-      if(deneme>=MAX_DENEME){document.getElementById("durum").innerHTML="🙂 Bir daha deneyelim, ya da <b>Geç</b>'e bas.";document.getElementById("gecBtn").style.display="inline-block";}
-      else document.getElementById("durum").innerHTML="🔁 Az kaldı, tekrar dene!";
+      if(deneme>=MAX_DENEME){ document.getElementById("durum").innerHTML="🙂 Sorun değil, devam!"; setTimeout(challengeGec,900); }
+      else{ document.getElementById("durum").innerHTML="💪 Az kaldı, tekrar dinliyorum!"; setTimeout(tekrarDinle,700); }
     }
   };
-  taniyici.onerror=ev=>{dinliyor=false;document.getElementById("soyleBtn").textContent="🎤 Söyle";
-    if(ev.error==="not-allowed"||ev.error==="service-not-allowed")document.getElementById("durum").innerHTML="🎤 Mikrofon izni gerekli.";
-    else document.getElementById("durum").textContent="Seni duyamadım, tekrar dene 🎤";};
-  taniyici.onend=()=>{dinliyor=false;document.getElementById("soyleBtn").textContent="🎤 Söyle";};
-  }
-  dinliyor=true;document.getElementById("soyleBtn").textContent="🎙️ Dinliyorum...";document.getElementById("durum").textContent="";
-  try{taniyici.start();}catch(_){dinliyor=false;}
+  taniyici.onerror=ev=>{
+    if(izinDenemesi){ izinDenemesi=false; try{taniyici.stop();}catch(_){}
+      if(ev.error==="not-allowed"||ev.error==="service-not-allowed") mikrofonReddedildi=true;
+      return; }
+    if(ev.error==="not-allowed"||ev.error==="service-not-allowed"){ mikrofonReddedildi=true; document.getElementById("durum").innerHTML="🎤 Mikrofon izni gerekli."; }
+  };
+  taniyici.onend=()=>{
+    dinliyor=false;
+    if(izinDenemesi){ izinDenemesi=false; return; }
+    clearTimeout(sessizlikTimer);
+    if(!sonucGeldi && aktifRobot){
+      deneme++;
+      if(deneme>=MAX_DENEME){ document.getElementById("durum").innerHTML="🙂 Sorun değil, devam!"; setTimeout(challengeGec,900); }
+      else{ document.getElementById("durum").innerHTML="👂 Seni duyamadım, tekrar dinliyorum!"; setTimeout(tekrarDinle,600); }
+    }
+  };
+}
+function mikrofonIzniAl(){
+  if(!TanimaAPI || mikrofonReddedildi) return;
+  if(!taniyici) taniyiciKur();
+  try{ izinDenemesi=true; taniyici.start(); }catch(_){ izinDenemesi=false; }
+}
+function tekrarDinle(){ if(!aktifRobot) return; document.getElementById("duydum").textContent=""; seslendir(aktifRobot.kelime, dinlemeyeBasla); }
+function dinlemeyeBasla(){
+  if(!aktifRobot) return;
+  if(!TanimaAPI || mikrofonReddedildi){ document.getElementById("durum").innerHTML="🎤 Mikrofon yok, devam ediliyor..."; setTimeout(challengeGec,900); return; }
+  if(dinliyor) return;
+  if(!taniyici) taniyiciKur();
+  sonucGeldi=false; dinliyor=true;
+  document.getElementById("durum").textContent="🎙️ Dinliyorum...";
+  clearTimeout(sessizlikTimer);
+  sessizlikTimer=setTimeout(()=>{ try{ taniyici.stop(); }catch(_){} }, 5000);
+  try{ taniyici.start(); }catch(_){ dinliyor=false; }
 }
 
 /* ---- Esnek eşleştirme ---- */
@@ -583,6 +604,7 @@ function oyunuBaslat(){
   if(dokunmatikMi()) document.body.classList.add("dokunmatik");
   if("speechSynthesis"in window){ sesleriCoz(); const w=new SpeechSynthesisUtterance(" ");w.volume=0;speechSynthesis.speak(w); } // sesi ısıt + Türkçe sesi çöz
   oyunAktif=true;
+  mikrofonIzniAl();
   sagligiCiz();
   robotlariYerlestir();
   if(!dokunmatikMi() && renderer.domElement.requestPointerLock) renderer.domElement.requestPointerLock();

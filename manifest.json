@@ -2,10 +2,13 @@
     "name": "Bulut'un Robot Macerasi",
     "short_name": "BulutOyun",
     "description": "Bulut icin konusma terapisi 3D robot oyunu",
-    "start_url": "./BulutOyun3D_1.html",
-    "scope": "./",
+    "start_url": "/BulutOyun/BulutOyun3D_1.html",
+    "scope": "/BulutOyun/",
     "display": "fullscreen",
     "orientation": "landscape",
     "background_color": "#7ec8ff",
-    "theme_color": "#5aa9e6"
+    "theme_color": "#5aa9e6",
+    "icons": [
+        { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+    ]
 }

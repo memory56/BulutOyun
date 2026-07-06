@@ -628,5 +628,6 @@ kurulum();
 if("speechSynthesis"in window) speechSynthesis.onvoiceschanged=sesleriCoz;
 dongu();
 </script>
+ <script>if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("./sw.js").catch(function(e){console.log("SW hata:",e);});});}</script>
 </body>
 </html>

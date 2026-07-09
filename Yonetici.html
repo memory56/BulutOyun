@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bulut Oyun — Yönetici Paneli</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+body{font-family:"Segoe UI",system-ui,sans-serif;background:#eef4fb;color:#1c2b3a;padding:16px;line-height:1.5;}
+h1{font-size:1.5rem;margin-bottom:4px;color:#2c3e50;}
+.aciklama{font-size:.9rem;color:#5a6b7b;margin-bottom:16px;}
+.cubuk{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;}
+button{border:none;border-radius:10px;padding:10px 14px;font-size:.95rem;font-weight:700;color:#fff;cursor:pointer;}
+button:active{transform:translateY(1px);}
+.b-mavi{background:#4895ef;}.b-yesil{background:#2ecc71;}.b-turuncu{background:#f77f00;}
+.b-kirmizi{background:#e63946;}.b-gri{background:#8d99ae;}.b-mor{background:#7048e8;}
+.ekle{background:#fff;border-radius:14px;padding:14px;box-shadow:0 2px 8px rgba(0,0,0,.08);margin-bottom:16px;}
+.ekle input,.ekle select{width:100%;padding:10px;border:1px solid #cdd8e3;border-radius:8px;font-size:1rem;margin-bottom:8px;}
+.satir{display:flex;gap:8px;}
+.satir>*{flex:1;}
+.kart{background:#fff;border-radius:12px;padding:12px;box-shadow:0 1px 5px rgba(0,0,0,.07);margin-bottom:10px;
+display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.kmetin{font-size:1.15rem;font-weight:800;flex:1;min-width:120px;}
+.rozet{background:#eef4fb;color:#4895ef;border-radius:8px;padding:2px 8px;font-size:.75rem;font-weight:800;}
+.durum{font-size:.75rem;padding:2px 8px;border-radius:8px;font-weight:700;}
+.var{background:#d3f9d8;color:#2b8a3e;}
+.yok{background:#ffe3e3;color:#c92a2a;}
+.mini{padding:8px 10px;font-size:.85rem;border-radius:8px;}
+.kayitAktif{background:#e63946 !important;animation:yaniyor 1s infinite;}
+@keyframes yaniyor{50%{opacity:.5;}}
+#gizliAudio{display:none;}
+.bilgi{font-size:.8rem;color:#5a6b7b;background:#fff8e1;border:1px solid #ffe08a;border-radius:8px;padding:8px 10px;margin-bottom:12px;}
+</style>
+</head>
+<body>
+
+<h1>☁️ Bulut Oyun — Yönetici Paneli</h1>
+<p class="aciklama">Kelime/sözcük ekleyin, kendi sesinizle kaydedin. Sesler bu cihazda saklanır; JSON olarak yedekleyip başka cihaza taşıyabilirsiniz.</p>
+
+<div class="bilgi">🎤 Kayıt için tarayıcı mikrofon izni ister. Kayıtlar bu cihazın tarayıcısında (IndexedDB) tutulur — oyun aynı cihazda açıldığında bu sesleri kullanır.</div>
+
+<div class="cubuk">
+<button class="b-yesil" onclick="yedekIndir()">⬇️ JSON Yedek İndir</button>
+<button class="b-mavi" onclick="document.getElementById('yukleInput').click()">⬆️ Yedek Yükle</button>
+<input type="file" id="yukleInput" accept="application/json" style="display:none" onchange="yedekYukle(this.files[0])">
+<button class="b-gri" onclick="varsayilanlariEkle()">📋 Örnek Kelimeleri Ekle</button>
+</div>
+
+<div class="ekle">
+<div class="satir">
+<input id="yeniMetin" placeholder="Kelime veya sözcük (örn: kırmızı elma)" maxlength="40">
+<select id="yeniBolum">
+<option value="1">Bölüm 1</option>
+<option value="2">Bölüm 2</option>
+<option value="3">Bölüm 3</option>
+<option value="4">Bölüm 4</option>
+</select>
+</div>
+<button class="b-turuncu" style="width:100%" onclick="kelimeEkle()">➕ Kelime Ekle</button>
+</div>
+
+<div id="liste"></div>
+
+<audio id="gizliAudio"></audio>
+
+<script>
+/* ============================================================
+VERİ KATMANI — IndexedDB (oyun ile ORTAK şema)
+DB: BulutOyunDB | store: kelimeler
+kayıt: {id, metin, bolum, sesBlob(Blob|null), olusturma}
+============================================================ */
+const DB_ADI="BulutOyunDB", STORE="kelimeler";
+let db=null;
+
+function dbAc(){
+return new Promise((cs,red)=>{
+const istek=indexedDB.open(DB_ADI,1);
+istek.onupgradeneeded=e=>{
+const d=e.target.result;
+if(!d.objectStoreNames.contains(STORE)){
+d.createObjectStore(STORE,{keyPath:"id"});
+}
+};
+istek.onsuccess=e=>{ db=e.target.result; cs(db); };
+istek.onerror=e=>red(e.target.error);
+});
+}
+function tumKelimeler(){
+return new Promise((cs,red)=>{
+const t=db.transaction(STORE,"readonly").objectStore(STORE).getAll();
+t.onsuccess=()=>cs(t.result.sort((a,b)=>a.bolum-b.bolum || a.olusturma-b.olusturma));
+t.onerror=()=>red(t.error);
+});
+}
+function kelimeKaydet(k){
+return new Promise((cs,red)=>{
+const t=db.transaction(STORE,"readwrite").objectStore(STORE).put(k);
+t.onsuccess=()=>cs(); t.onerror=()=>red(t.error);
+});
+}
+function kelimeSil(id){
+return new Promise((cs,red)=>{
+const t=db.transaction(STORE,"readwrite").objectStore(STORE).delete(id);
+t.onsuccess=()=>cs(); t.onerror=()=>red(t.error);
+});
+}
+
+/* ============================================================
+KELİME EKLE / SİL / LİSTELE
+============================================================ */
+function idUret(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+
+async function kelimeEkle(){
+const metin=document.getElementById("yeniMetin").value.trim();
+const bolum=parseInt(document.getElementById("yeniBolum").value,10);
+if(!metin){ alert("Önce bir kelime yazın."); return; }
+if(metin.split(/\s+/).length>3){ alert("En fazla 3 kelime olabilir."); return; }
+await kelimeKaydet({id:idUret(),metin,bolum,sesBlob:null,olusturma:Date.now()});
+document.getElementById("yeniMetin").value="";
+listeCiz();
+}
+
+async function silTikla(id){
+if(!confirm("Bu kelime ve sesi silinsin mi?")) return;
+await kelimeSil(id);
+listeCiz();
+}
+
+async function listeCiz(){
+const kelimeler=await tumKelimeler();
+const liste=document.getElementById("liste");
+if(!kelimeler.length){ liste.innerHTML='<p class="aciklama">Henüz kelime yok. Yukarıdan ekleyin ya da "Örnek Kelimeleri Ekle" deyin.</p>'; return; }
+liste.innerHTML="";
+for(const k of kelimeler){
+const kart=document.createElement("div"); kart.className="kart";
+const sesVar=!!(k.sesBlob && k.sesBlob.size>0);
+kart.innerHTML=`
+<span class="rozet">B${k.bolum}</span>
+<span class="kmetin">${k.metin}</span>
+<span class="durum ${sesVar?'var':'yok'}">${sesVar?'🎤 ses var':'ses yok'}</span>
+`;
+const kayitBtn=document.createElement("button");
+kayitBtn.className="b-kirmizi mini"; kayitBtn.textContent="⏺ Kaydet";
+kayitBtn.onclick=()=>kayitBaslatDur(k.id,kayitBtn);
+const dinleBtn=document.createElement("button");
+dinleBtn.className="b-mavi mini"; dinleBtn.textContent="▶ Dinle";
+dinleBtn.disabled=!sesVar; if(!sesVar) dinleBtn.style.opacity=.4;
+dinleBtn.onclick=()=>sesDinlet(k.id);
+const silBtn=document.createElement("button");
+silBtn.className="b-gri mini"; silBtn.textContent="🗑";
+silBtn.onclick=()=>silTikla(k.id);
+kart.append(kayitBtn,dinleBtn,silBtn);
+liste.appendChild(kart);
+}
+}
+
+/* ============================================================
+SES KAYDI — MediaRecorder
+============================================================ */
+let medyaKayit=null, kayitParcalari=[], kayitYapilanId=null, kayitBtnRef=null;
+
+async function kayitBaslatDur(id,btn){
+if(medyaKayit && medyaKayit.state==="recording"){
+medyaKayit.stop(); return; // durdur
+}
+try{
+const akis=await navigator.mediaDevices.getUserMedia({audio:true});
+kayitParcalari=[]; kayitYapilanId=id; kayitBtnRef=btn;
+medyaKayit=new MediaRecorder(akis);
+medyaKayit.ondataavailable=e=>{ if(e.data.size>0) kayitParcalari.push(e.data); };
+medyaKayit.onstop=async ()=>{
+akis.getTracks().forEach(t=>t.stop());
+const blob=new Blob(kayitParcalari,{type: medyaKayit.mimeType||"audio/webm"});
+const kelimeler=await tumKelimeler();
+const k=kelimeler.find(x=>x.id===kayitYapilanId);
+if(k){ k.sesBlob=blob; await kelimeKaydet(k); }
+kayitBtnRef.classList.remove("kayitAktif"); kayitBtnRef.textContent="⏺ Kaydet";
+medyaKayit=null; listeCiz();
+};
+medyaKayit.start();
+btn.classList.add("kayitAktif"); btn.textContent="⏹ Dur";
+}catch(err){
+alert("Mikrofona erişilemedi: "+err.message);
+}
+}
+
+async function sesDinlet(id){
+const kelimeler=await tumKelimeler();
+const k=kelimeler.find(x=>x.id===id);
+if(!k||!k.sesBlob) return;
+const a=document.getElementById("gizliAudio");
+a.src=URL.createObjectURL(k.sesBlob);
+a.play();
+}
+
+/* ============================================================
+JSON YEDEK — dışa/içe aktarma (Blob -> base64)
+============================================================ */
+function blobToBase64(blob){
+return new Promise(cs=>{
+if(!blob){ cs(null); return; }
+const r=new FileReader();
+r.onloadend=()=>cs(r.result); // data:...;base64,...
+r.readAsDataURL(blob);
+});
+}
+async function base64ToBlob(dataUrl){
+if(!dataUrl) return null;
+const res=await fetch(dataUrl); return await res.blob();
+}
+
+async function yedekIndir(){
+const kelimeler=await tumKelimeler();
+const disa=[];
+for(const k of kelimeler){
+disa.push({
+id:k.id, metin:k.metin, bolum:k.bolum, olusturma:k.olusturma,
+ses: await blobToBase64(k.sesBlob)
+});
+}
+const veri={surum:1, tarih:new Date().toISOString(), kelimeler:disa};
+const blob=new Blob([JSON.stringify(veri)],{type:"application/json"});
+const a=document.createElement("a");
+a.href=URL.createObjectURL(blob);
+a.download="bulut-oyun-yedek.json";
+a.click();
+}
+
+async function yedekYukle(dosya){
+if(!dosya) return;
+try{
+const metin=await dosya.text();
+const veri=JSON.parse(metin);
+if(!veri.kelimeler) throw new Error("Geçersiz yedek dosyası.");
+if(!confirm(veri.kelimeler.length+" kelime yüklenecek. Aynı id'ler güncellenir. Devam?")) return;
+for(const k of veri.kelimeler){
+const blob=await base64ToBlob(k.ses);
+await kelimeKaydet({id:k.id||idUret(), metin:k.metin, bolum:k.bolum||1, sesBlob:blob, olusturma:k.olusturma||Date.now()});
+}
+alert("Yedek yüklendi.");
+listeCiz();
+}catch(e){ alert("Yükleme hatası: "+e.message); }
+document.getElementById("yukleInput").value="";
+}
+
+/* ============================================================
+ÖRNEK KELİMELER (oyundaki BOLUMLER ile uyumlu)
+============================================================ */
+async function varsayilanlariEkle(){
+const varsayilan=[
+{b:1,liste:["kedi","elma","masa","balık","yağmur","kuzu"]},
+{b:2,liste:["araba","çiçek","bardak","kalem","kelebek","portakal"]},
+{b:3,liste:["kırmızı elma","güzel kelebek","büyük araba","yeşil ağaç"]},
+{b:4,liste:["günaydın","teşekkür ederim","nasılsın","afiyet olsun"]},
+];
+const mevcut=await tumKelimeler();
+const mevcutMetin=new Set(mevcut.map(k=>k.bolum+"|"+k.metin));
+let sayi=0;
+for(const grup of varsayilan){
+for(const m of grup.liste){
+if(mevcutMetin.has(grup.b+"|"+m)) continue;
+await kelimeKaydet({id:idUret(),metin:m,bolum:grup.b,sesBlob:null,olusturma:Date.now()+sayi});
+sayi++;
+}
+}
+alert(sayi+" örnek kelime eklendi.");
+listeCiz();
+}
+
+/* ============================================================
+BAŞLAT
+============================================================ */
+(async ()=>{ await dbAc(); listeCiz(); })();
+</script>
+</body>
+</html>

@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Bulut'un Kule Savunmasi</title>
+<meta name="theme-color" content="#5aa9e6">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Bulut'un Kule Savunmasi">
+<meta name="application-name" content="Bulut'un Kule Savunmasi">
+<link rel="manifest" href="manifest.json">
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0;}
+html,body{height:100%;overflow:hidden;background:#7ec8ff;font-family:"Segoe UI",system-ui,sans-serif;color:#fff;}
+canvas{display:block;position:fixed;inset:0;}
+#hud{position:fixed;top:10px;left:10px;right:10px;display:flex;justify-content:space-between;
+align-items:flex-start;pointer-events:none;z-index:3;text-shadow:0 2px 4px rgba(0,0,0,.4);}
+.kutu{background:rgba(0,0,0,.32);border-radius:14px;padding:8px 12px;font-weight:800;font-size:1rem;
+backdrop-filter:blur(3px);margin-bottom:6px;}
+#sagUst{display:flex;flex-direction:column;align-items:flex-end;}
+#panel,#kulePanel{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);width:min(92vw,460px);
+background:rgba(20,30,45,.92);border-radius:20px;padding:16px;text-align:center;
+box-shadow:0 10px 30px rgba(0,0,0,.4);display:none;z-index:6;backdrop-filter:blur(4px);}
+#panel.acik,#kulePanel.acik{display:block;animation:gir .2s ease;}
+@keyframes gir{from{transform:translate(-50%,14px);opacity:0}to{transform:translate(-50%,0);opacity:1}}
+#ipucu{font-size:.9rem;opacity:.85;}
+#ilerleme{font-size:.85rem;opacity:.85;margin-top:4px;font-weight:800;color:#8fd3ff;}
+#kelime{font-size:2.1rem;font-weight:900;margin:6px 0 12px;color:#ffd166;}
+.btnlar{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;}
+button{border:none;border-radius:14px;padding:14px 18px;font-size:1rem;font-weight:800;color:#fff;
+cursor:pointer;box-shadow:0 4px 0 rgba(0,0,0,.3);transition:transform .05s;}
+button:active{transform:translateY(2px);box-shadow:0 2px 0 rgba(0,0,0,.3);}
+.b-dinle{background:#4895ef;}.b-soyle{background:#f77f00;}.b-gec{background:#8d99ae;}.b-up{background:#2ecc71;}
+#durum{margin-top:12px;font-weight:800;min-height:1.4em;font-size:1.05rem;}
+#duydum{margin-top:4px;font-size:.82rem;opacity:.6;min-height:1.1em;}
+#kuleBaslik{font-size:1.2rem;margin-bottom:4px;}
+#kuleBilgi{font-size:.9rem;opacity:.9;margin-bottom:12px;line-height:1.5;}
+#mesaj{position:fixed;top:88px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.6);
+padding:8px 16px;border-radius:16px;font-weight:800;opacity:0;transition:opacity .25s;z-index:5;pointer-events:none;}
+#mesaj.gor{opacity:1;}
+#basla{position:fixed;inset:0;background:linear-gradient(180deg,#5aa9e6,#7fc8f8);z-index:20;
+display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;text-align:center;padding:22px;}
+#basla h1{font-size:2rem;text-shadow:0 3px 6px rgba(0,0,0,.3);}
+#basla p{max-width:440px;opacity:.95;line-height:1.5;font-size:.96rem;}
+#basla button{background:#f77f00;font-size:1.3rem;padding:16px 34px;}
+.robotEmoji{font-size:3rem;}
+#kutlama{position:fixed;inset:0;background:rgba(90,169,230,.95);z-index:15;display:none;
+flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;padding:22px;}
+#kutlama.gor{display:flex;}
+#kutlama .buyuk{font-size:3rem;}#kutlama h2{font-size:1.6rem;}
+#kutlama button{background:#f77f00;font-size:1.2rem;padding:16px 30px;}
+</style>
+</head>
+<body>
+<div id="hud">
+<div>
+<div class="kutu" id="saglik">HP</div>
+<div class="kutu">Puan <span id="skor">80</span></div>
+</div>
+<div id="sagUst">
+<div class="kutu">Bolum <span id="bolum">1</span></div>
+<div class="kutu">Kalan <span id="kalan">0</span></div>
+</div>
+</div>
+<div id="kulePanel">
+<div id="kuleBaslik">Kule</div>
+<div id="kuleBilgi"></div>
+<div class="btnlar">
+<button class="b-up" id="upgradeBtn" onclick="upgradeBaslat()">Gelistir</button>
+<button class="b-gec" onclick="kulePanelKapat()">Kapat</button>
+</div>
+</div>
+<div id="panel">
+<div id="ipucu">Bu kelimeyi soyle:</div>
+<div id="kelime">-</div>
+<div id="ilerleme"></div>
+<div class="btnlar">
+<button class="b-dinle" onclick="kelimeyiSesliOku()">Dinle</button>
+<button class="b-soyle" onclick="dinlemeyeBasla()">Soyle</button>
+<button class="b-gec" id="iptalBtn" onclick="telaffuzIptal()">Vazgec</button>
+</div>
+<div id="durum"></div>
+<div id="duydum"></div>
+</div>
+<div id="mesaj"></div>
+<div id="basla">
+<div class="robotEmoji">Bulut Kule Robot</div>
+<h1>Bulut'un Kule Savunmasi</h1>
+<p><b>Amac:</b> Robotlar yoldan bulutuna yuruyor! Bos yerlere dokun, bedava kule dik.
+Kuleye dokunup <b>Gelistir</b> dersen bir kelime cikar - dogru soyle, kule guclensin!</p>
+<p><b>Bolum gecisi:</b> Bolum bitince arka arkaya 3 kelime sorulur. Ucunu de dogru soyle!</p>
+<button onclick="oyunuBaslat()">Basla</button>
+</div>
+<div id="kutlama">
+<div class="buyuk">Tebrikler</div>
+<h2 id="kutlamaBaslik">Bolumu bitirdin, Bulut!</h2>
+<button id="devamBtn" onclick="bolumSonuSinav()">Devam</button>
+</div>
+<audio id="oynatici" style="display:none"></audio>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"><\/script>
+<script>
+const BOLUMLER=[
+{robot:5, can:2,hiz:1.3,kelimeler:["kedi","elma","masa","balik","yagmur","kuzu"]},
+{robot:7, can:3,hiz:1.5,kelimeler:["araba","cicek","bardak","kalem","kelebek","portakal"]},
+{robot:9, can:4,hiz:1.7,kelimeler:["kirmizi elma","guzel kelebek","buyuk araba","yesil agac"]},
+{robot:11,can:6,hiz:1.9,kelimeler:["gunaydin","tesekkur ederim","nasilsin","afiyet olsun"]},
+];
+const YOL=[{x:-11,z:-9},{x:-4,z:-9},{x:-4,z:-2},{x:5,z:-2},{x:5,z:6},{x:-2,z:6},{x:-2,z:11}];
+const SLOTLAR=[{x:-8,z:-6},{x:-1,z:-6},{x:-7,z:1},{x:1,z:1},{x:8,z:1},{x:2,z:3},{x:-5,z:8},{x:1,z:9}];
+const KADEMELER=[
+{menzil:3.0,hasar:1,aralik:1.0,maliyet:0,  renk:0x8d99ae},
+{menzil:3.8,hasar:2,aralik:0.8,maliyet:30, renk:0x4895ef},
+{menzil:4.6,hasar:3,aralik:0.6,maliyet:60, renk:0x2ecc71},
+{menzil:5.5,hasar:5,aralik:0.45,maliyet:100,renk:0xf77f00},
+];
+const DB_ADI="BulutOyunDB",STORE="kelimeler";
+let panelDB=null,panelKelimeler=[];
+function panelDbAc(){return new Promise(cs=>{
+const istek=indexedDB.open(DB_ADI,1);
+istek.onupgradeneeded=e=>{const d=e.target.result;if(!d.objectStoreNames.contains(STORE))d.createObjectStore(STORE,{keyPath:"id"});};
+istek.onsuccess=e=>{panelDB=e.target.result;cs();};
+istek.onerror=()=>cs();
+});}
+function panelKelimeleriYukle(){return new Promise(cs=>{
+if(!panelDB){cs();return;}
+try{const t=panelDB.transaction(STORE,"readonly").objectStore(STORE).getAll();
+t.onsuccess=()=>{panelKelimeler=t.result||[];cs();};t.onerror=()=>cs();}catch(_){cs();}
+});}
+function bolumKelimeleri(bidx){
+const pk=panelKelimeler.filter(k=>k.bolum===bidx+1).map(k=>k.metin);
+return pk.length?pk:BOLUMLER[bidx].kelimeler;
+}
+function kelimeKaydiBul(metin){
+return panelKelimeler.find(k=>k.metin===metin && k.sesBlob && k.sesBlob.size>0)||null;
+}
+let scene,camera,renderer,clock,raycaster,fare;
+let bolumIdx=0,skor=80,can=5,oyunAktif=false,durakla=false;
+let robotlar=[],olenler=[],parcaciklar=[],kuleler=[],mermiler=[],slotMeshler=[];
+const CAN_MAX=8;
+let dalgaKalan=0,dogumSayaci=0;
+function pikselDoku(cizer){const c=document.createElement("canvas");c.width=c.height=16;
+const x=c.getContext("2d");cizer(x);const t=new THREE.CanvasTexture(c);
+t.magFilter=THREE.NearestFilter;t.minFilter=THREE.NearestFilter;return t;}
+function gurultu(x,taban,fark){for(let i=0;i<16;i++)for(let j=0;j<16;j++){const g=Math.random();
+x.fillStyle="rgb("+(taban[0]+g*fark)+","+(taban[1]+g*fark)+","+(taban[2]+g*fark)+")";x.fillRect(i,j,1,1);}}
+const dokuCim=pikselDoku(x=>gurultu(x,[70,150,60],40));
+const dokuYol=pikselDoku(x=>gurultu(x,[150,140,110],30));
+function kurulum(){
+scene=new THREE.Scene();scene.background=new THREE.Color(0x8ed0ff);
+scene.fog=new THREE.Fog(0x8ed0ff,28,54);
+camera=new THREE.PerspectiveCamera(55,innerWidth/innerHeight,0.1,120);
+camera.position.set(0,24,20);camera.lookAt(0,0,1);
+renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,1.6));
+document.body.appendChild(renderer.domElement);
+scene.add(new THREE.AmbientLight(0xffffff,0.8));
+const gunes=new THREE.DirectionalLight(0xffffff,0.85);gunes.position.set(8,20,10);scene.add(gunes);
+raycaster=new THREE.Raycaster();fare=new THREE.Vector2();
+zeminKur();yolKur();usKur();slotlariKur();clock=new THREE.Clock();
+}
+function zeminKur(){dokuCim.wrapS=dokuCim.wrapT=THREE.RepeatWrapping;dokuCim.repeat.set(15,15);
+const z=new THREE.Mesh(new THREE.PlaneGeometry(30,30),new THREE.MeshLambertMaterial({map:dokuCim}));
+z.rotation.x=-Math.PI/2;z.position.y=-0.01;scene.add(z);}
+function yolKur(){const mat=new THREE.MeshLambertMaterial({map:dokuYol});
+for(let i=0;i<YOL.length-1;i++){const a=YOL[i],b=YOL[i+1],uzn=Math.hypot(b.x-a.x,b.z-a.z),yatay=Math.abs(b.x-a.x)>Math.abs(b.z-a.z);
+const seg=new THREE.Mesh(new THREE.BoxGeometry(yatay?uzn+1.6:1.6,0.12,yatay?1.6:uzn+1.6),mat);
+seg.position.set((a.x+b.x)/2,0.06,(a.z+b.z)/2);scene.add(seg);}}
+function usKur(){const son=YOL[YOL.length-1],g=new THREE.Group(),mat=new THREE.MeshLambertMaterial({color:0xffffff});
+for(let j=0;j<4;j++){const b=new THREE.Mesh(new THREE.BoxGeometry(1.6,0.9,1.6),mat);b.position.set(j*1.1-1.6,0,0);g.add(b);}
+g.position.set(son.x,0.9,son.z);scene.add(g);}
+function slotlariKur(){SLOTLAR.forEach((s,i)=>{
+const m=new THREE.Mesh(new THREE.CylinderGeometry(0.55,0.6,0.2,8),new THREE.MeshLambertMaterial({color:0x556070,transparent:true,opacity:0.6}));
+m.position.set(s.x,0.1,s.z);m.userData={slotIndex:i};scene.add(m);slotMeshler.push(m);});}
+
+function kuleGovdesiYap(kademe){const g=new THREE.Group(),renk=KADEMELER[kademe].renk;
+const taban=new THREE.Mesh(new THREE.BoxGeometry(0.8,0.4,0.8),new THREE.MeshLambertMaterial({color:0x6c7a89}));taban.position.y=0.3;
+const govde=new THREE.Mesh(new THREE.BoxGeometry(0.5,0.6+kademe*0.2,0.5),new THREE.MeshLambertMaterial({color:renk}));govde.position.y=0.7+kademe*0.1;
+const namlu=new THREE.Mesh(new THREE.BoxGeometry(0.18,0.18,0.7),new THREE.MeshLambertMaterial({color:0x2c3e50}));namlu.position.set(0,0.9+kademe*0.1,0.35);
+g.add(taban,govde,namlu);return g;}
+function kuleDik(slotIndex){const s=SLOTLAR[slotIndex],grup=kuleGovdesiYap(0);grup.position.set(s.x,0,s.z);scene.add(grup);
+kuleler.push({slotIndex,kademe:0,grup,atesSayaci:0});slotMeshler[slotIndex].visible=false;mesajGoster("Kule dikildi!");}
+function slottakiKule(i){return kuleler.find(k=>k.slotIndex===i);}
+function kuleGorunumGuncelle(kule){scene.remove(kule.grup);kule.grup=kuleGovdesiYap(kule.kademe);
+const s=SLOTLAR[kule.slotIndex];kule.grup.position.set(s.x,0,s.z);scene.add(kule.grup);}
+function robotYap(){const g=new THREE.Group();
+const govdeMat=new THREE.MeshLambertMaterial({color:0x6c7a89}),kafaMat=new THREE.MeshLambertMaterial({color:0x95a5a6}),gozMat=new THREE.MeshBasicMaterial({color:0xff3b30});
+const govde=new THREE.Mesh(new THREE.BoxGeometry(0.7,0.8,0.5),govdeMat);govde.position.y=0.9;
+const kafa=new THREE.Mesh(new THREE.BoxGeometry(0.55,0.5,0.5),kafaMat);kafa.position.y=1.6;
+const g1=new THREE.Mesh(new THREE.BoxGeometry(0.12,0.12,0.05),gozMat);g1.position.set(-0.13,1.62,0.26);
+const g2=g1.clone();g2.position.x=0.13;
+const bacL=new THREE.Mesh(new THREE.BoxGeometry(0.18,0.6,0.18),kafaMat);bacL.position.set(-0.18,0.3,0);
+const bacR=bacL.clone();bacR.position.x=0.18;
+g.add(govde,kafa,g1,g2,bacL,bacR);return g;}
+function robotDogur(){const b=BOLUMLER[bolumIdx],grup=robotYap();grup.position.set(YOL[0].x,0,YOL[0].z);scene.add(grup);
+robotlar.push({grup,hp:b.can,hiz:b.hiz,hedef:1,dying:false});}
+function bolumBaslat(){robotlar.forEach(r=>scene.remove(r.grup));robotlar=[];
+dalgaKalan=BOLUMLER[bolumIdx].robot;dogumSayaci=0;
+document.getElementById("bolum").textContent=bolumIdx+1;kalanGuncelle();}
+function kalanGuncelle(){document.getElementById("kalan").textContent=dalgaKalan+robotlar.filter(r=>!r.dying).length;}
+function guncelle(dt){
+if(dalgaKalan>0 && !durakla){dogumSayaci-=dt;
+if(dogumSayaci<=0){robotDogur();dalgaKalan--;dogumSayaci=1.4;kalanGuncelle();}}
+robotlariGuncelle(dt);kulelerGuncelle(dt);mermileriGuncelle(dt);parcaciklariGuncelle(dt);olenleriGuncelle(dt);
+if(!durakla && dalgaKalan===0 && robotlar.filter(r=>!r.dying).length===0 && oyunAktif){oyunAktif=false;bolumBitti();}}
+function robotlariGuncelle(dt){for(const r of robotlar){if(r.dying)continue;
+r.grup.position.y=Math.sin(performance.now()*0.005+r.grup.id)*0.06;
+const h=YOL[r.hedef],dx=h.x-r.grup.position.x,dz=h.z-r.grup.position.z,d=Math.hypot(dx,dz);
+r.grup.rotation.y=Math.atan2(dx,dz);
+if(d<0.3){r.hedef++;
+if(r.hedef>=YOL.length){scene.remove(r.grup);r.dying=true;can--;sagligiCiz();mesajGoster("Robot bulutuna ulasti!");if(can<=0)oyunBitti();kalanGuncelle();continue;}}
+else if(!durakla){r.grup.position.x+=dx/d*r.hiz*dt;r.grup.position.z+=dz/d*r.hiz*dt;}}
+robotlar=robotlar.filter(r=>!(r.dying&&!olenler.some(o=>o.grup===r.grup)));}
+function kulelerGuncelle(dt){if(durakla)return;
+for(const k of kuleler){const kd=KADEMELER[k.kademe];k.atesSayaci-=dt;
+let hedef=null,min=1e9;
+for(const r of robotlar){if(r.dying)continue;
+const d=Math.hypot(r.grup.position.x-k.grup.position.x,r.grup.position.z-k.grup.position.z);
+if(d<kd.menzil&&d<min){min=d;hedef=r;}}
+if(hedef){const dx=hedef.grup.position.x-k.grup.position.x,dz=hedef.grup.position.z-k.grup.position.z;
+k.grup.rotation.y=Math.atan2(dx,dz);
+if(k.atesSayaci<=0){k.atesSayaci=kd.aralik;atesEt(k,hedef,kd.hasar);}}}}
+function atesEt(kule,hedef,hasar){const m=new THREE.Mesh(new THREE.SphereGeometry(0.14,6,6),new THREE.MeshBasicMaterial({color:0xffd166}));
+m.position.copy(kule.grup.position);m.position.y=1;scene.add(m);mermiler.push({mesh:m,hedef,hasar,t:0});}
+function mermileriGuncelle(dt){for(let i=mermiler.length-1;i>=0;i--){const b=mermiler[i];b.t+=dt;
+if(b.hedef.dying){scene.remove(b.mesh);mermiler.splice(i,1);continue;}
+const hp=b.hedef.grup.position,dx=hp.x-b.mesh.position.x,dy=(hp.y+1)-b.mesh.position.y,dz=hp.z-b.mesh.position.z,d=Math.hypot(dx,dy,dz);
+if(d<0.4||b.t>1.2){robotaHasar(b.hedef,b.hasar);scene.remove(b.mesh);mermiler.splice(i,1);}
+else{const v=16*dt;b.mesh.position.x+=dx/d*v;b.mesh.position.y+=dy/d*v;b.mesh.position.z+=dz/d*v;}}}
+function robotaHasar(r,hasar){if(r.dying)return;r.hp-=hasar;
+if(r.hp<=0){r.dying=true;skor+=10;document.getElementById("skor").textContent=skor;patlamaEfekti(r.grup.position);olenler.push({grup:r.grup,t:0});kalanGuncelle();}}
+function olenleriGuncelle(dt){for(let i=olenler.length-1;i>=0;i--){const o=olenler[i];o.t+=dt;
+o.grup.scale.setScalar(Math.max(0,1-o.t*2));o.grup.position.y+=dt*1.5;o.grup.rotation.y+=dt*8;
+if(o.t>0.5){scene.remove(o.grup);olenler.splice(i,1);}}}
+function patlamaEfekti(pos){const mat=new THREE.MeshBasicMaterial({color:0xffd166});
+for(let i=0;i<10;i++){const p=new THREE.Mesh(new THREE.BoxGeometry(0.12,0.12,0.12),mat);
+p.position.copy(pos);p.position.y+=1;p.userData.v=new THREE.Vector3((Math.random()-0.5)*4,Math.random()*4,(Math.random()-0.5)*4);p.userData.t=0;scene.add(p);parcaciklar.push(p);}}
+function parcaciklariGuncelle(dt){for(let i=parcaciklar.length-1;i>=0;i--){const p=parcaciklar[i];p.userData.t+=dt;
+p.userData.v.y-=8*dt;p.position.addScaledVector(p.userData.v,dt);
+if(p.userData.t>0.7){scene.remove(p);parcaciklar.splice(i,1);}}}
+
+function tiklamaIsle(clientX,clientY){if(durakla)return;
+fare.x=(clientX/innerWidth)*2-1;fare.y=-(clientY/innerHeight)*2+1;
+raycaster.setFromCamera(fare,camera);
+let hit=raycaster.intersectObjects(kuleler.map(k=>k.grup),true);
+if(hit.length){let obj=hit[0].object;while(obj.parent&&!kuleler.some(k=>k.grup===obj))obj=obj.parent;
+const kule=kuleler.find(k=>k.grup===obj);if(kule){kulePanelAc(kule);return;}}
+hit=raycaster.intersectObjects(slotMeshler.filter(m=>m.visible),false);
+if(hit.length){kuleDik(hit[0].object.userData.slotIndex);}}
+let seciliKule=null;
+function kulePanelAc(kule){seciliKule=kule;
+const k=kule.kademe,son=k>=KADEMELER.length-1;
+const su=KADEMELER[k];
+let bilgi="Kademe "+(k+1)+"/"+KADEMELER.length+"<br>Menzil "+su.menzil.toFixed(1)+" | Hasar "+su.hasar+" | Hiz "+(1/su.aralik).toFixed(1)+"/sn";
+const btn=document.getElementById("upgradeBtn");
+if(son){bilgi+="<br><b>En yuksek kademe!</b>";btn.style.display="none";}
+else{const sonraki=KADEMELER[k+1];
+bilgi+="<br><br>Gelistir -> Kademe "+(k+2)+" (Menzil "+sonraki.menzil.toFixed(1)+", Hasar "+sonraki.hasar+")<br><b>Maliyet: "+sonraki.maliyet+" puan</b>";
+btn.style.display="";btn.textContent="Gelistir ("+sonraki.maliyet+")";}
+document.getElementById("kuleBilgi").innerHTML=bilgi;
+document.getElementById("kulePanel").classList.add("acik");durakla=true;}
+function kulePanelKapat(){document.getElementById("kulePanel").classList.remove("acik");seciliKule=null;durakla=false;}
+function upgradeBaslat(){if(!seciliKule)return;
+const sonrakiKademe=seciliKule.kademe+1;
+if(sonrakiKademe>=KADEMELER.length)return;
+const maliyet=KADEMELER[sonrakiKademe].maliyet;
+if(skor<maliyet){mesajGoster("Yetersiz puan! ("+maliyet+" gerekli)");return;}
+document.getElementById("kulePanel").classList.remove("acik");
+const havuz=bolumKelimeleri(bolumIdx);
+const kelime=havuz[Math.floor(Math.random()*havuz.length)];
+telaffuzSor(kelime,1,1,()=>{
+skor-=maliyet;document.getElementById("skor").textContent=skor;
+seciliKule.kademe=sonrakiKademe;kuleGorunumGuncelle(seciliKule);
+mesajGoster("Kule Kademe "+(seciliKule.kademe+1)+"!");
+seciliKule=null;durakla=false;
+},()=>{mesajGoster("Gelistirme iptal.");seciliKule=null;durakla=false;});}
+let sinavKelimeler=[],sinavIdx=0;
+function bolumSonuSinav(){
+document.getElementById("kutlama").classList.remove("gor");
+const havuz=bolumKelimeleri(bolumIdx).slice();
+sinavKelimeler=[];
+for(let i=0;i<3;i++){
+if(!havuz.length)havuz.push(...bolumKelimeleri(bolumIdx));
+const idx=Math.floor(Math.random()*havuz.length);
+sinavKelimeler.push(havuz.splice(idx,1)[0]);
+}
+sinavIdx=0;sinavSonraki();}
+function sinavSonraki(){
+if(sinavIdx>=sinavKelimeler.length){gercektenSonrakiBolum();return;}
+const kelime=sinavKelimeler[sinavIdx];
+telaffuzSor(kelime,sinavIdx+1,sinavKelimeler.length,()=>{
+sinavIdx++;setTimeout(sinavSonraki,500);
+},()=>{
+mesajGoster("Tekrar deneyelim!");sinavIdx=0;setTimeout(sinavSonraki,800);
+});}
+
+let aktifKelime=null,basariCb=null,iptalCb=null,deneme=0;
+const MAX_DENEME=3;
+function telaffuzSor(kelime,sira,toplam,onBasari,onIptal){
+aktifKelime=kelime;basariCb=onBasari;iptalCb=onIptal;deneme=0;durakla=true;
+document.getElementById("kelime").textContent=kelime;
+document.getElementById("ipucu").textContent=kelime.indexOf(" ")>=0?"Bu sozcugu soyle:":"Bu kelimeyi soyle:";
+document.getElementById("ilerleme").textContent=toplam>1?("Kelime "+sira+" / "+toplam):"";
+document.getElementById("durum").textContent="";
+document.getElementById("duydum").textContent="";
+document.getElementById("panel").classList.add("acik");
+setTimeout(kelimeyiSesliOku,300);}
+function telaffuzPanelKapat(){sesDur();try{if(taniyici)taniyici.stop();}catch(_){}
+document.getElementById("panel").classList.remove("acik");}
+function telaffuzBasarili(){document.getElementById("durum").innerHTML="Harika!";
+const cb=basariCb;aktifKelime=null;basariCb=null;iptalCb=null;
+setTimeout(()=>{telaffuzPanelKapat();if(cb)cb();},700);}
+function telaffuzIptal(){const cb=iptalCb;aktifKelime=null;basariCb=null;iptalCb=null;
+telaffuzPanelKapat();durakla=false;if(cb)cb();}
+function telaffuzBasarisiz(){deneme++;
+if(deneme>=MAX_DENEME){document.getElementById("durum").innerHTML="Sorun degil, tekrar dinle!";deneme=0;setTimeout(tekrarDinle,900);}
+else{document.getElementById("durum").innerHTML="Az kaldi, tekrar dinliyorum!";setTimeout(tekrarDinle,700);}}
+let secilenSes=null;
+function sesleriCoz(){if(!("speechSynthesis"in window))return;
+const v=speechSynthesis.getVoices();if(!v.length)return;
+const tr=v.filter(x=>/^tr/i.test(x.lang));
+secilenSes=tr.find(x=>/google/i.test(x.name))||tr.find(x=>/turkish|turk/i.test(x.name))||tr[0]||null;}
+function sesDur(){if("speechSynthesis"in window)speechSynthesis.cancel();
+const o=document.getElementById("oynatici");if(o){o.pause();o.currentTime=0;}}
+function seslendir(metin,bitince){
+const kayit=kelimeKaydiBul(metin);
+if(kayit){const o=document.getElementById("oynatici");
+o.src=URL.createObjectURL(kayit.sesBlob);
+o.onended=()=>{if(bitince)bitince();};
+o.play().catch(()=>{if(bitince)bitince();});
+return;}
+if(!("speechSynthesis"in window)){if(bitince)bitince();return;}
+sesDur();if(!secilenSes)sesleriCoz();
+const u=new SpeechSynthesisUtterance(metin);u.lang="tr-TR";u.rate=0.7;u.pitch=1.0;
+if(secilenSes)u.voice=secilenSes;
+if(bitince)u.onend=()=>bitince();
+speechSynthesis.speak(u);}
+function kelimeyiSesliOku(){if(aktifKelime)seslendir(aktifKelime,dinlemeyeBasla);}
+function tekrarDinle(){if(!aktifKelime)return;document.getElementById("duydum").textContent="";seslendir(aktifKelime,dinlemeyeBasla);}
+const TanimaAPI=window.SpeechRecognition||window.webkitSpeechRecognition;
+let taniyici=null,dinliyor=false,sonucGeldi=false,izinDenemesi=false,mikrofonReddedildi=false,sessizlikTimer=null;
+function taniyiciKur(){taniyici=new TanimaAPI();taniyici.lang="tr-TR";taniyici.interimResults=false;taniyici.maxAlternatives=5;
+taniyici.onresult=e=>{sonucGeldi=true;const sec=[];for(const a of e.results[0])sec.push(a.transcript);
+document.getElementById("duydum").textContent="duydugum: "+sec[0];
+if(aktifKelime && sec.some(s=>eslesiyorMu(s,aktifKelime)))telaffuzBasarili();
+else if(aktifKelime)telaffuzBasarisiz();};
+taniyici.onerror=ev=>{if(izinDenemesi){izinDenemesi=false;try{taniyici.stop();}catch(_){}
+if(ev.error==="not-allowed"||ev.error==="service-not-allowed")mikrofonReddedildi=true;return;}
+if(ev.error==="not-allowed"||ev.error==="service-not-allowed"){mikrofonReddedildi=true;document.getElementById("durum").innerHTML="Mikrofon izni gerekli.";}};
+taniyici.onend=()=>{dinliyor=false;if(izinDenemesi){izinDenemesi=false;return;}
+clearTimeout(sessizlikTimer);
+if(!sonucGeldi && aktifKelime){deneme++;
+if(deneme>=MAX_DENEME){document.getElementById("durum").innerHTML="Seni duyamadim, tekrar dinle!";deneme=0;setTimeout(tekrarDinle,700);}
+else{document.getElementById("durum").innerHTML="Seni duyamadim, tekrar dinliyorum!";setTimeout(tekrarDinle,600);}}};}
+function mikrofonIzniAl(){if(!TanimaAPI||mikrofonReddedildi)return;if(!taniyici)taniyiciKur();
+try{izinDenemesi=true;taniyici.start();}catch(_){izinDenemesi=false;}}
+function dinlemeyeBasla(){if(!aktifKelime)return;
+if(!TanimaAPI||mikrofonReddedildi){document.getElementById("durum").innerHTML="Mikrofon yok. 'Vazgec' ile devam et.";return;}
+if(dinliyor)return;if(!taniyici)taniyiciKur();
+sonucGeldi=false;dinliyor=true;document.getElementById("durum").textContent="Dinliyorum...";
+clearTimeout(sessizlikTimer);sessizlikTimer=setTimeout(()=>{try{taniyici.stop();}catch(_){}} ,5000);
+try{taniyici.start();}catch(_){dinliyor=false;}}
+function sadelestir(s){return s.toLocaleLowerCase("tr").replace(/[.,!?;:]/g,"").replace(/\s+/g," ").trim();}
+function asciiKat(s){return s.replace(/\u00e7/g,"c").replace(/\u011f/g,"g").replace(/\u0131/g,"i").replace(/\u00f6/g,"o").replace(/\u015f/g,"s").replace(/\u00fc/g,"u");}
+function mesafe(a,b){const m=a.length,n=b.length,d=Array.from({length:m+1},(_,i)=>[i,...Array(n).fill(0)]);
+for(let j=0;j<=n;j++)d[0][j]=j;
+for(let i=1;i<=m;i++)for(let j=1;j<=n;j++)d[i][j]=Math.min(d[i-1][j]+1,d[i][j-1]+1,d[i-1][j-1]+(a[i-1]===b[j-1]?0:1));
+return d[m][n];}
+function eslesiyorMu(soylenen,hedef){const s=sadelestir(soylenen),h=sadelestir(hedef);if(!s)return false;
+if(s===h)return true;if(s.includes(h)||h.includes(s))return true;
+const sa=asciiKat(s),ha=asciiKat(h);if(sa===ha||sa.includes(ha)||ha.includes(sa))return true;
+const esik=Math.max(1,Math.floor(ha.length*0.4));if(mesafe(sa,ha)<=esik)return true;
+const ilk=sa.split(" ")[0];if(ha.indexOf(" ")<0&&mesafe(ilk,ha)<=esik)return true;return false;}
+
+function sagligiCiz(){document.getElementById("saglik").textContent="HP: "+Math.max(0,can)+"/"+CAN_MAX;}
+function mesajGoster(t){const m=document.getElementById("mesaj");m.textContent=t;m.classList.add("gor");
+clearTimeout(mesajGoster._t);mesajGoster._t=setTimeout(()=>m.classList.remove("gor"),1600);}
+function bolumBitti(){const son=bolumIdx>=BOLUMLER.length-1;
+document.getElementById("kutlamaBaslik").textContent=son?"Tum bolumleri bitirdin, Bulut!":"Bolumu bitirdin, Bulut!";
+document.getElementById("devamBtn").textContent=son?"Bastan Oyna (3 kelime)":"Devam (3 kelime)";
+document.getElementById("kutlama").classList.add("gor");durakla=true;}
+function gercektenSonrakiBolum(){
+document.getElementById("panel").classList.remove("acik");
+bolumIdx=(bolumIdx+1)%BOLUMLER.length;
+if(bolumIdx===0){can=Math.min(CAN_MAX,can+2);}else if(can<CAN_MAX){can++;}
+sagligiCiz();
+kuleler.forEach(k=>scene.remove(k.grup));kuleler=[];
+slotMeshler.forEach(m=>m.visible=true);
+mermiler.forEach(b=>scene.remove(b.mesh));mermiler=[];
+durakla=false;oyunAktif=true;
+bolumBaslat();mesajGoster("Bolum "+(bolumIdx+1)+" basliyor!");}
+function oyunBitti(){oyunAktif=false;durakla=true;
+document.getElementById("kutlamaBaslik").textContent="Bulutun ele gecti! Tekrar dene.";
+document.getElementById("devamBtn").textContent="Yeniden Basla";
+document.getElementById("kutlama").classList.add("gor");
+document.getElementById("devamBtn").onclick=()=>location.reload();}
+function tikOlayi(e){if(!oyunAktif&&!durakla)return;
+const t=e.changedTouches?e.changedTouches[0]:e;
+if(t.target.closest&&(t.target.closest("#panel")||t.target.closest("#kulePanel")||t.target.closest("#kutlama")||t.target.closest("#basla")||t.target.closest("button")))return;
+tiklamaIsle(t.clientX,t.clientY);}
+async function oyunuBaslat(){
+document.getElementById("basla").style.display="none";
+await panelDbAc();await panelKelimeleriYukle();
+if("speechSynthesis"in window){sesleriCoz();const w=new SpeechSynthesisUtterance(" ");w.volume=0;speechSynthesis.speak(w);}
+mikrofonIzniAl();
+can=5;sagligiCiz();oyunAktif=true;durakla=false;bolumBaslat();
+mesajGoster("Bolum 1 basliyor!");}
+function dongu(){requestAnimationFrame(dongu);const dt=Math.min(clock.getDelta(),0.05);
+if(oyunAktif||durakla)guncelle(dt);renderer.render(scene,camera);}
+addEventListener("resize",()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);});
+addEventListener("click",tikOlayi);
+addEventListener("touchstart",e=>{tikOlayi(e);},{passive:true});
+kurulum();
+if("speechSynthesis"in window)speechSynthesis.onvoiceschanged=sesleriCoz;
+dongu();
+<\/script>
+<script>if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("./sw.js").catch(function(e){console.log("SW hata:",e);});});}<\/script>
+</body>
+</html>

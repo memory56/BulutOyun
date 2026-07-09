@@ -99,7 +99,7 @@ Kuleye dokunup <b>Gelistir</b> dersen bir kelime cikar - dogru soyle, kule gucle
 <button id="devamBtn" onclick="bolumSonuSinav()">Devam</button>
 </div>
 <audio id="oynatici" style="display:none"></audio>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"><\/script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 const BOLUMLER=[
 {robot:5, can:2,hiz:1.3,kelimeler:["kedi","elma","masa","balik","yagmur","kuzu"]},
@@ -414,7 +414,7 @@ addEventListener("touchstart",e=>{tikOlayi(e);},{passive:true});
 kurulum();
 if("speechSynthesis"in window)speechSynthesis.onvoiceschanged=sesleriCoz;
 dongu();
-<\/script>
-<script>if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("./sw.js").catch(function(e){console.log("SW hata:",e);});});}<\/script>
+</script>
+<script>if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("./sw.js").catch(function(e){console.log("SW hata:",e);});});}</script>
 </body>
 </html>

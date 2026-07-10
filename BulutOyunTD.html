@@ -123,7 +123,7 @@ const KADEMELER=[
 {menzil:5.5,hasar:5,aralik:0.45,maliyet:100,renk:0xf77f00},
 ];
 // Kademe k'den k+1'e gecis icin gereken bolum: 2k+1  (Kademe1->2:Bolum3, 2->3:Bolum5, 3->4:Bolum7)
-function gerekliBolum(kademe){return 2*kademe+1;}
+function gerekliBolum(kademe){return 2*kademe+3;}
 const DB_ADI="BulutOyunDB",STORE="kelimeler";
 let panelDB=null,panelKelimeler=[];
 function panelDbAc(){return new Promise(cs=>{

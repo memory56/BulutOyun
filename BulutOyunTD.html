@@ -206,7 +206,7 @@ const barArka=new THREE.Mesh(new THREE.PlaneGeometry(0.8,0.14),new THREE.MeshBas
 const barDolu=new THREE.Mesh(new THREE.PlaneGeometry(0.8,0.14),new THREE.MeshBasicMaterial({color:0x2ecc71,depthTest:false}));barDolu.position.set(0,2.15,0.001);barDolu.renderOrder=999;
 g.add(govde,kafa,g1,g2,bacL,bacR,barArka,barDolu);g.userData.barDolu=barDolu;g.userData.barArka=barArka;return g;}
 function robotDogur(){const b=BOLUMLER[bolumIdx],grup=robotYap();grup.position.set(YOL[0].x,0,YOL[0].z);scene.add(grup);
-robotlar.push({grup,hp:b.can,hiz:b.hiz,hedef:1,dying:false});}
+robotlar.push({grup,hp:b.can,maxHp:b.can,hiz:b.hiz,hedef:1,dying:false});}
 function bolumBaslat(){robotlar.forEach(r=>scene.remove(r.grup));robotlar=[];
 mermiler.forEach(b=>scene.remove(b.mesh));mermiler=[];
 dalgaKalan=BOLUMLER[bolumIdx].robot;dogumSayaci=0;
@@ -251,6 +251,8 @@ const hp=b.hedef.grup.position,dx=hp.x-b.mesh.position.x,dy=(hp.y+1)-b.mesh.posi
 if(d<0.4||b.t>1.2){robotaHasar(b.hedef,b.hasar);scene.remove(b.mesh);mermiler.splice(i,1);}
 else{const v=16*dt;b.mesh.position.x+=dx/d*v;b.mesh.position.y+=dy/d*v;b.mesh.position.z+=dz/d*v;}}}
 function robotaHasar(r,hasar){if(r.dying)return;r.hp-=hasar;
+const bd=r.grup.userData.barDolu;if(bd){const oran=Math.max(0,r.hp/r.maxHp);bd.scale.x=oran;bd.position.x=-0.4*(1-oran);bd.material.color.setHex(oran>0.5?0x2ecc71:(oran>0.25?0xf1c40f:0xe74c3c));}
+if(r.hp<=0){r.dying=true;skor+=10;document.getElementById("skor").textContent=skor;patlamaEfekti(r.grup.position);olenler.push({grup:r.grup,t:0});kalanGuncelle();}}
 if(r.hp<=0){r.dying=true;skor+=10;document.getElementById("skor").textContent=skor;patlamaEfekti(r.grup.position);olenler.push({grup:r.grup,t:0});kalanGuncelle();}}
 function olenleriGuncelle(dt){for(let i=olenler.length-1;i>=0;i--){const o=olenler[i];o.t+=dt;
 o.grup.scale.setScalar(Math.max(0,1-o.t*2));o.grup.position.y+=dt*1.5;o.grup.rotation.y+=dt*8;

@@ -217,7 +217,7 @@ function sizanGuncelle(){document.getElementById("sizan").textContent=sizanRobot
 document.getElementById("sizanSinir").textContent=sizanSinir;}
 function guncelle(dt){
 if(dalgaKalan>0 && !durakla){dogumSayaci-=dt;
-if(dogumSayaci<=0){robotDogur();dalgaKalan--;dogumSayaci=1.4;kalanGuncelle();}}
+if(dogumSayaci<=0){robotDogur();dalgaKalan--;dogumSayaci=2.0;kalanGuncelle();}}
 robotlariGuncelle(dt);kulelerGuncelle(dt);mermileriGuncelle(dt);parcaciklariGuncelle(dt);olenleriGuncelle(dt);
 if(!durakla && dalgaKalan===0 && robotlar.filter(r=>!r.dying).length===0 && oyunAktif){oyunAktif=false;bolumBitti();}}
 function robotlariGuncelle(dt){for(const r of robotlar){if(r.dying)continue;

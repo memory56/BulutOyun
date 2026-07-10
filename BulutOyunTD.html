@@ -253,7 +253,6 @@ else{const v=16*dt;b.mesh.position.x+=dx/d*v;b.mesh.position.y+=dy/d*v;b.mesh.po
 function robotaHasar(r,hasar){if(r.dying)return;r.hp-=hasar;
 const bd=r.grup.userData.barDolu;if(bd){const oran=Math.max(0,r.hp/r.maxHp);bd.scale.x=oran;bd.position.x=-0.4*(1-oran);bd.material.color.setHex(oran>0.5?0x2ecc71:(oran>0.25?0xf1c40f:0xe74c3c));}
 if(r.hp<=0){r.dying=true;skor+=10;document.getElementById("skor").textContent=skor;patlamaEfekti(r.grup.position);olenler.push({grup:r.grup,t:0});kalanGuncelle();}}
-if(r.hp<=0){r.dying=true;skor+=10;document.getElementById("skor").textContent=skor;patlamaEfekti(r.grup.position);olenler.push({grup:r.grup,t:0});kalanGuncelle();}}
 function olenleriGuncelle(dt){for(let i=olenler.length-1;i>=0;i--){const o=olenler[i];o.t+=dt;
 o.grup.scale.setScalar(Math.max(0,1-o.t*2));o.grup.position.y+=dt*1.5;o.grup.rotation.y+=dt*8;
 if(o.t>0.5){scene.remove(o.grup);olenler.splice(i,1);}}}

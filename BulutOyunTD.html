@@ -209,7 +209,7 @@ function robotDogur(){const b=BOLUMLER[bolumIdx],grup=robotYap();grup.position.s
 robotlar.push({grup,hp:b.can,maxHp:b.can,hiz:b.hiz,hedef:1,dying:false});}
 function bolumBaslat(){robotlar.forEach(r=>scene.remove(r.grup));robotlar=[];
 mermiler.forEach(b=>scene.remove(b.mesh));mermiler=[];
-dalgaKalan=BOLUMLER[bolumIdx].robot;dogumSayaci=0;
+dalgaKalan=BOLUMLER[bolumIdx].robot;dogumSayaci=3.0;
 bolumToplamRobot=BOLUMLER[bolumIdx].robot;sizanRobot=0;
 sizanSinir=Math.floor(bolumToplamRobot/2); // bu sayidan FAZLASI sizarsa fail
 document.getElementById("bolum").textContent=bolumIdx+1;

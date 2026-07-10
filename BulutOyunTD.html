@@ -202,7 +202,9 @@ const g1=new THREE.Mesh(new THREE.BoxGeometry(0.12,0.12,0.05),gozMat);g1.positio
 const g2=g1.clone();g2.position.x=0.13;
 const bacL=new THREE.Mesh(new THREE.BoxGeometry(0.18,0.6,0.18),kafaMat);bacL.position.set(-0.18,0.3,0);
 const bacR=bacL.clone();bacR.position.x=0.18;
-g.add(govde,kafa,g1,g2,bacL,bacR);return g;}
+const barArka=new THREE.Mesh(new THREE.PlaneGeometry(0.8,0.14),new THREE.MeshBasicMaterial({color:0x3a0000,depthTest:false}));barArka.position.set(0,2.15,0);barArka.renderOrder=998;
+const barDolu=new THREE.Mesh(new THREE.PlaneGeometry(0.8,0.14),new THREE.MeshBasicMaterial({color:0x2ecc71,depthTest:false}));barDolu.position.set(0,2.15,0.001);barDolu.renderOrder=999;
+g.add(govde,kafa,g1,g2,bacL,bacR,barArka,barDolu);g.userData.barDolu=barDolu;g.userData.barArka=barArka;return g;}
 function robotDogur(){const b=BOLUMLER[bolumIdx],grup=robotYap();grup.position.set(YOL[0].x,0,YOL[0].z);scene.add(grup);
 robotlar.push({grup,hp:b.can,hiz:b.hiz,hedef:1,dying:false});}
 function bolumBaslat(){robotlar.forEach(r=>scene.remove(r.grup));robotlar=[];

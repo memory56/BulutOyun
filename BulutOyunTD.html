@@ -261,4 +261,205 @@ p.userData.v.y-=8*dt;p.position.addScaledVector(p.userData.v,dt);
 if(p.userData.t>0.7){scene.remove(p);parcaciklar.splice(i,1);}}}
 
 function tiklamaIsle(clientX,clientY){if(durakla)return;
-fare.x=(clientX/innerWidth)*2-1;fare.y=-(clientY/innerHeight)*2+
+fare.x=(clientX/innerWidth)*2-1;fare.y=-(clientY/innerHeight)*2+1;
+raycaster.setFromCamera(fare,camera);
+let hit=raycaster.intersectObjects(kuleler.map(k=>k.grup),true);
+if(hit.length){let obj=hit[0].object;while(obj.parent&&!kuleler.some(k=>k.grup===obj))obj=obj.parent;
+const kule=kuleler.find(k=>k.grup===obj);if(kule){kulePanelAc(kule);return;}}
+hit=raycaster.intersectObjects(slotMeshler.filter(m=>m.visible),false);
+if(hit.length){kuleDik(hit[0].object.userData.slotIndex);}}
+let seciliKule=null;
+function kulePanelAc(kule){seciliKule=kule;
+const k=kule.kademe,son=k>=KADEMELER.length-1;
+const su=KADEMELER[k];
+let bilgi="Kademe "+(k+1)+"/"+KADEMELER.length+"<br>Menzil "+su.menzil.toFixed(1)+" | Hasar "+su.hasar+" | Hiz "+(1/su.aralik).toFixed(1)+"/sn";
+const btn=document.getElementById("upgradeBtn");
+if(son){bilgi+="<br><b>En yuksek kademe!</b>";btn.style.display="none";}
+else{const sonraki=KADEMELER[k+1];const gerekli=gerekliBolum(k);
+bilgi+="<br><br>Gelistir -> Kademe "+(k+2)+" (Menzil "+sonraki.menzil.toFixed(1)+", Hasar "+sonraki.hasar+")<br><b>Maliyet: "+sonraki.maliyet+" puan</b>";
+btn.style.display="";
+if(bolumIdx+1<gerekli){bilgi+="<br><b>Bolum "+gerekli+"'te acilir</b>";btn.disabled=true;btn.textContent="Kilitli (Bolum "+gerekli+")";}
+else{btn.disabled=false;btn.textContent="Gelistir ("+sonraki.maliyet+")";}}
+document.getElementById("kuleBilgi").innerHTML=bilgi;
+document.getElementById("kulePanel").classList.add("acik");durakla=true;}
+function kulePanelKapat(){document.getElementById("kulePanel").classList.remove("acik");seciliKule=null;durakla=false;}
+function upgradeBaslat(){if(!seciliKule)return;
+const sonrakiKademe=seciliKule.kademe+1;
+if(sonrakiKademe>=KADEMELER.length)return;
+const gerekli=gerekliBolum(seciliKule.kademe);
+if(bolumIdx+1<gerekli){mesajGoster("Bu gelistirme Bolum "+gerekli+"'te acilir!");return;}
+const maliyet=KADEMELER[sonrakiKademe].maliyet;
+if(skor<maliyet){mesajGoster("Yetersiz puan! ("+maliyet+" gerekli)");return;}
+document.getElementById("kulePanel").classList.remove("acik");
+const havuz=bolumKelimeleri(bolumIdx);
+const kelime=havuz[Math.floor(Math.random()*havuz.length)];
+telaffuzSor(kelime,1,1,()=>{
+skor-=maliyet;document.getElementById("skor").textContent=skor;
+seciliKule.kademe=sonrakiKademe;kuleGorunumGuncelle(seciliKule);
+mesajGoster("Kule Kademe "+(seciliKule.kademe+1)+"!");
+seciliKule=null;durakla=false;
+},()=>{mesajGoster("Gelistirme iptal.");seciliKule=null;durakla=false;});}
+let sinavKelimeler=[],sinavIdx=0;
+function bolumSonuSinav(){
+document.getElementById("kutlama").classList.remove("gor");
+const havuz=bolumKelimeleri(bolumIdx).slice();
+sinavKelimeler=[];
+for(let i=0;i<3;i++){
+if(!havuz.length)havuz.push(...bolumKelimeleri(bolumIdx));
+const idx=Math.floor(Math.random()*havuz.length);
+sinavKelimeler.push(havuz.splice(idx,1)[0]);
+}
+sinavIdx=0;sinavSonraki();}
+function sinavSonraki(){
+if(sinavIdx>=sinavKelimeler.length){gercektenSonrakiBolum();return;}
+const kelime=sinavKelimeler[sinavIdx];
+telaffuzSor(kelime,sinavIdx+1,sinavKelimeler.length,()=>{
+sinavIdx++;setTimeout(sinavSonraki,500);
+},()=>{
+mesajGoster("Tekrar deneyelim!");sinavIdx=0;setTimeout(sinavSonraki,800);
+});}
+
+let aktifKelime=null,basariCb=null,iptalCb=null,deneme=0;
+const MAX_DENEME=3;
+function telaffuzSor(kelime,sira,toplam,onBasari,onIptal){
+aktifKelime=kelime;basariCb=onBasari;iptalCb=onIptal;deneme=0;durakla=true;
+document.getElementById("kelime").textContent=kelime;
+document.getElementById("ipucu").textContent=kelime.indexOf(" ")>=0?"Bu sozcugu soyle:":"Bu kelimeyi soyle:";
+document.getElementById("ilerleme").textContent=toplam>1?("Kelime "+sira+" / "+toplam):"";
+document.getElementById("durum").textContent="";
+document.getElementById("duydum").textContent="";
+document.getElementById("panel").classList.add("acik");
+setTimeout(kelimeyiSesliOku,300);}
+function telaffuzPanelKapat(){sesDur();try{if(taniyici)taniyici.stop();}catch(_){}
+document.getElementById("panel").classList.remove("acik");}
+function telaffuzBasarili(){document.getElementById("durum").innerHTML="Harika!";
+const cb=basariCb;aktifKelime=null;basariCb=null;iptalCb=null;
+setTimeout(()=>{telaffuzPanelKapat();if(cb)cb();},700);}
+function telaffuzIptal(){const cb=iptalCb;aktifKelime=null;basariCb=null;iptalCb=null;
+telaffuzPanelKapat();durakla=false;if(cb)cb();}
+function telaffuzBasarisiz(){deneme++;
+if(deneme>=MAX_DENEME){document.getElementById("durum").innerHTML="Sorun degil, tekrar dinle!";deneme=0;setTimeout(tekrarDinle,900);}
+else{document.getElementById("durum").innerHTML="Az kaldi, tekrar dinliyorum!";setTimeout(tekrarDinle,700);}}
+let secilenSes=null;
+function sesleriCoz(){if(!("speechSynthesis"in window))return;
+const v=speechSynthesis.getVoices();if(!v.length)return;
+const tr=v.filter(x=>/^tr/i.test(x.lang));
+secilenSes=tr.find(x=>/google/i.test(x.name))||tr.find(x=>/turkish|turk/i.test(x.name))||tr[0]||null;}
+function sesDur(){if("speechSynthesis"in window)speechSynthesis.cancel();
+const o=document.getElementById("oynatici");if(o){o.pause();o.currentTime=0;}}
+function seslendir(metin,bitince){
+const kayit=kelimeKaydiBul(metin);
+if(kayit){const o=document.getElementById("oynatici");
+o.src=URL.createObjectURL(kayit.sesBlob);
+o.onended=()=>{if(bitince)bitince();};
+o.play().catch(()=>{if(bitince)bitince();});
+return;}
+if(!("speechSynthesis"in window)){if(bitince)bitince();return;}
+sesDur();if(!secilenSes)sesleriCoz();
+const u=new SpeechSynthesisUtterance(metin);u.lang="tr-TR";u.rate=0.7;u.pitch=1.0;
+if(secilenSes)u.voice=secilenSes;
+if(bitince)u.onend=()=>bitince();
+speechSynthesis.speak(u);}
+function kelimeyiSesliOku(){if(aktifKelime)seslendir(aktifKelime,dinlemeyeBasla);}
+function tekrarDinle(){if(!aktifKelime)return;document.getElementById("duydum").textContent="";seslendir(aktifKelime,dinlemeyeBasla);}
+const TanimaAPI=window.SpeechRecognition||window.webkitSpeechRecognition;
+let taniyici=null,dinliyor=false,sonucGeldi=false,izinDenemesi=false,mikrofonReddedildi=false,sessizlikTimer=null;
+function taniyiciKur(){taniyici=new TanimaAPI();taniyici.lang="tr-TR";taniyici.interimResults=false;taniyici.maxAlternatives=5;
+taniyici.onresult=e=>{sonucGeldi=true;const sec=[];for(const a of e.results[0])sec.push(a.transcript);
+document.getElementById("duydum").textContent="duydugum: "+sec[0];
+if(aktifKelime && sec.some(s=>eslesiyorMu(s,aktifKelime)))telaffuzBasarili();
+else if(aktifKelime)telaffuzBasarisiz();};
+taniyici.onerror=ev=>{if(izinDenemesi){izinDenemesi=false;try{taniyici.stop();}catch(_){}
+if(ev.error==="not-allowed"||ev.error==="service-not-allowed")mikrofonReddedildi=true;return;}
+if(ev.error==="not-allowed"||ev.error==="service-not-allowed"){mikrofonReddedildi=true;document.getElementById("durum").innerHTML="Mikrofon izni gerekli.";}};
+taniyici.onend=()=>{dinliyor=false;if(izinDenemesi){izinDenemesi=false;return;}
+clearTimeout(sessizlikTimer);
+if(!sonucGeldi && aktifKelime){deneme++;
+if(deneme>=MAX_DENEME){document.getElementById("durum").innerHTML="Seni duyamadim, tekrar dinle!";deneme=0;setTimeout(tekrarDinle,700);}
+else{document.getElementById("durum").innerHTML="Seni duyamadim, tekrar dinliyorum!";setTimeout(tekrarDinle,600);}}};}
+function mikrofonIzniAl(){if(!TanimaAPI||mikrofonReddedildi)return;if(!taniyici)taniyiciKur();
+try{izinDenemesi=true;taniyici.start();}catch(_){izinDenemesi=false;}}
+function dinlemeyeBasla(){if(!aktifKelime)return;
+if(!TanimaAPI||mikrofonReddedildi){document.getElementById("durum").innerHTML="Mikrofon yok. 'Vazgec' ile devam et.";return;}
+if(dinliyor)return;if(!taniyici)taniyiciKur();
+sonucGeldi=false;dinliyor=true;document.getElementById("durum").textContent="Dinliyorum...";
+clearTimeout(sessizlikTimer);sessizlikTimer=setTimeout(()=>{try{taniyici.stop();}catch(_){}} ,5000);
+try{taniyici.start();}catch(_){dinliyor=false;}}
+function sadelestir(s){return s.toLocaleLowerCase("tr").replace(/[.,!?;:]/g,"").replace(/\s+/g," ").trim();}
+function asciiKat(s){return s.replace(/\u00e7/g,"c").replace(/\u011f/g,"g").replace(/\u0131/g,"i").replace(/\u00f6/g,"o").replace(/\u015f/g,"s").replace(/\u00fc/g,"u");}
+function mesafe(a,b){const m=a.length,n=b.length,d=Array.from({length:m+1},(_,i)=>[i,...Array(n).fill(0)]);
+for(let j=0;j<=n;j++)d[0][j]=j;
+for(let i=1;i<=m;i++)for(let j=1;j<=n;j++)d[i][j]=Math.min(d[i-1][j]+1,d[i][j-1]+1,d[i-1][j-1]+(a[i-1]===b[j-1]?0:1));
+return d[m][n];}
+function eslesiyorMu(soylenen,hedef){const s=sadelestir(soylenen),h=sadelestir(hedef);if(!s)return false;
+if(s===h)return true;if(s.includes(h)||h.includes(s))return true;
+const sa=asciiKat(s),ha=asciiKat(h);if(sa===ha||sa.includes(ha)||ha.includes(sa))return true;
+const esik=Math.max(1,Math.floor(ha.length*0.4));if(mesafe(sa,ha)<=esik)return true;
+const ilk=sa.split(" ")[0];if(ha.indexOf(" ")<0&&mesafe(ilk,ha)<=esik)return true;return false;}
+
+function sagligiCiz(){document.getElementById("saglik").textContent="HP: "+Math.max(0,can)+"/"+CAN_MAX;}
+function mesajGoster(t){const m=document.getElementById("mesaj");m.textContent=t;m.classList.add("gor");
+clearTimeout(mesajGoster._t);mesajGoster._t=setTimeout(()=>m.classList.remove("gor"),1600);}
+function bolumBitti(){const son=bolumIdx>=BOLUMLER.length-1;
+document.getElementById("kutlamaEmoji").textContent="Tebrikler";
+document.getElementById("kutlamaBaslik").textContent=son?"Tum bolumleri bitirdin, Bulut!":"Bolumu bitirdin, Bulut!";
+document.getElementById("devamBtn").textContent=son?"Bastan Oyna (3 kelime)":"Devam (3 kelime)";
+document.getElementById("devamBtn").onclick=bolumSonuSinav;
+document.getElementById("kutlama").classList.add("gor");durakla=true;}
+function bolumBasarisiz(){if(!oyunAktif&&durakla)return;
+oyunAktif=false;durakla=true;
+robotlar.forEach(r=>scene.remove(r.grup));robotlar=[];
+mermiler.forEach(b=>scene.remove(b.mesh));mermiler=[];
+document.getElementById("kutlamaEmoji").textContent="Olmadi";
+document.getElementById("kutlamaBaslik").textContent="Robotlar bulutunu ele gecirdi! Ayni bolumu tekrar dene.";
+document.getElementById("devamBtn").textContent="Bolumu Tekrar Oyna";
+document.getElementById("devamBtn").onclick=bolumTekrar;
+document.getElementById("kutlama").classList.add("gor");}
+function bolumTekrar(){
+document.getElementById("kutlama").classList.remove("gor");
+document.getElementById("panel").classList.remove("acik");
+kuleler.forEach(k=>scene.remove(k.grup));kuleler=[];
+slotMeshler.forEach(m=>m.visible=true);
+can=5;sagligiCiz();
+durakla=false;oyunAktif=true;
+bolumBaslat();mesajGoster("Bolum "+(bolumIdx+1)+" tekrar basliyor!");}
+function gercektenSonrakiBolum(){
+document.getElementById("panel").classList.remove("acik");
+bolumIdx=(bolumIdx+1)%BOLUMLER.length;
+if(bolumIdx===0){can=Math.min(CAN_MAX,can+2);}else if(can<CAN_MAX){can++;}
+sagligiCiz();
+kuleler.forEach(k=>scene.remove(k.grup));kuleler=[];
+slotMeshler.forEach(m=>m.visible=true);
+mermiler.forEach(b=>scene.remove(b.mesh));mermiler=[];
+durakla=false;oyunAktif=true;
+bolumBaslat();mesajGoster("Bolum "+(bolumIdx+1)+" basliyor!");}
+function oyunBitti(){oyunAktif=false;durakla=true;
+document.getElementById("kutlamaEmoji").textContent="Olmadi";
+document.getElementById("kutlamaBaslik").textContent="Bulutun ele gecti! Tekrar dene.";
+document.getElementById("devamBtn").textContent="Yeniden Basla";
+document.getElementById("kutlama").classList.add("gor");
+document.getElementById("devamBtn").onclick=()=>location.reload();}
+function tikOlayi(e){if(!oyunAktif&&!durakla)return;
+const t=e.changedTouches?e.changedTouches[0]:e;
+if(t.target.closest&&(t.target.closest("#panel")||t.target.closest("#kulePanel")||t.target.closest("#kutlama")||t.target.closest("#basla")||t.target.closest("button")))return;
+tiklamaIsle(t.clientX,t.clientY);}
+async function oyunuBaslat(){
+document.getElementById("basla").style.display="none";
+await panelDbAc();await panelKelimeleriYukle();
+if("speechSynthesis"in window){sesleriCoz();const w=new SpeechSynthesisUtterance(" ");w.volume=0;speechSynthesis.speak(w);}
+mikrofonIzniAl();
+bolumIdx=0;skor=80;document.getElementById("skor").textContent=skor;
+can=5;sagligiCiz();oyunAktif=true;durakla=false;bolumBaslat();
+mesajGoster("Bolum 1 basliyor!");}
+function dongu(){requestAnimationFrame(dongu);const dt=Math.min(clock.getDelta(),0.05);
+if(oyunAktif||durakla)guncelle(dt);renderer.render(scene,camera);}
+addEventListener("resize",()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);});
+addEventListener("click",tikOlayi);
+addEventListener("touchstart",e=>{tikOlayi(e);},{passive:true});
+kurulum();
+if("speechSynthesis"in window)speechSynthesis.onvoiceschanged=sesleriCoz;
+dongu();
+</script>
+<script>if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("./sw.js").catch(function(e){console.log("SW hata:",e);});});}</script>
+</body>
+</html>

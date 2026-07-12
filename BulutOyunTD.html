@@ -20,10 +20,14 @@ align-items:flex-start;pointer-events:none;z-index:3;text-shadow:0 2px 4px rgba(
 .kutu{background:rgba(0,0,0,.32);border-radius:14px;padding:8px 12px;font-weight:800;font-size:1rem;
 backdrop-filter:blur(3px);margin-bottom:6px;}
 #sagUst{display:flex;flex-direction:column;align-items:flex-end;}
-#panel,#kulePanel{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);width:min(92vw,460px);
+#duraklaBtn{position:fixed;top:10px;left:50%;transform:translateX(-50%);z-index:8;background:rgba(0,0,0,.4);
+border-radius:14px;padding:10px 16px;font-size:1rem;font-weight:800;color:#fff;border:none;cursor:pointer;
+box-shadow:0 3px 8px rgba(0,0,0,.3);backdrop-filter:blur(3px);display:none;}
+#duraklaBtn.gor{display:block;}
+#panel{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);width:min(92vw,460px);
 background:rgba(20,30,45,.92);border-radius:20px;padding:16px;text-align:center;
 box-shadow:0 10px 30px rgba(0,0,0,.4);display:none;z-index:6;backdrop-filter:blur(4px);}
-#panel.acik,#kulePanel.acik{display:block;animation:gir .2s ease;}
+#panel.acik{display:block;animation:gir .2s ease;}
 @keyframes gir{from{transform:translate(-50%,14px);opacity:0}to{transform:translate(-50%,0);opacity:1}}
 #ipucu{font-size:.9rem;opacity:.85;}
 #ilerleme{font-size:.85rem;opacity:.85;margin-top:4px;font-weight:800;color:#8fd3ff;}
@@ -40,13 +44,14 @@ button:disabled{opacity:.5;cursor:not-allowed;}
 .b-dinle{background:#4895ef;}.b-soyle{background:#f77f00;}.b-gec{background:#8d99ae;}.b-up{background:#2ecc71;}
 #durum{margin-top:12px;font-weight:800;min-height:1.4em;font-size:1.05rem;}
 #duydum{margin-top:4px;font-size:.82rem;opacity:.6;min-height:1.1em;}
-#kuleBaslik{font-size:1.2rem;margin-bottom:4px;}
-#kuleBilgi{font-size:.9rem;opacity:.9;margin-bottom:12px;line-height:1.5;}
 #kuleBanner{position:fixed;top:0;left:0;right:0;background:linear-gradient(90deg,#2ecc71,#27ae60);color:#fff;text-align:center;padding:10px 12px;font-weight:800;font-size:.95rem;transform:translateY(-100%);transition:transform .35s ease;z-index:15;box-shadow:0 2px 10px rgba(0,0,0,.3);}
 #kuleBanner.gor{transform:translateY(0);}
 #mesaj{position:fixed;top:88px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.6);
 padding:8px 16px;border-radius:16px;font-weight:800;opacity:0;transition:opacity .25s;z-index:5;pointer-events:none;}
 #mesaj.gor{opacity:1;}
+#duraklaKapla{position:fixed;inset:0;background:rgba(20,30,45,.55);z-index:7;display:none;
+align-items:center;justify-content:center;font-size:1.6rem;font-weight:900;backdrop-filter:blur(2px);}
+#duraklaKapla.gor{display:flex;}
 #basla{position:fixed;inset:0;background:linear-gradient(180deg,#5aa9e6,#7fc8f8);z-index:20;
 display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;text-align:center;padding:22px;}
 #basla h1{font-size:2rem;text-shadow:0 3px 6px rgba(0,0,0,.3);}
@@ -76,14 +81,8 @@ flex-direction:column;align-items:center;justify-content:center;gap:14px;text-al
 <div class="kutu">Sizan <span id="sizan">0</span>/<span id="sizanSinir">0</span></div>
 </div>
 </div>
-<div id="kulePanel">
-<div id="kuleBaslik">Kule</div>
-<div id="kuleBilgi"></div>
-<div class="btnlar">
-<button class="b-up" id="upgradeBtn" onclick="upgradeBaslat()">Gelistir</button>
-<button class="b-gec" onclick="kulePanelKapat()">Kapat</button>
-</div>
-</div>
+<button id="duraklaBtn" onclick="oyunDuraklat()">⏸ Duraklat</button>
+<div id="duraklaKapla">⏸ Oyun duraklatildi</div>
 <div id="panel">
 <div id="ipucu">Bu kelimeyi soyle:</div>
 <div id="kelime">-</div>
@@ -97,8 +96,8 @@ flex-direction:column;align-items:center;justify-content:center;gap:14px;text-al
 <div class="robotEmoji">Bulut Kule Robot</div>
 <h1>Bulut'un Kule Savunmasi</h1>
 <p><b>Amac:</b> Robotlar yoldan bulutuna yuruyor! Bos yerlere dokunup kule dik (her kule 20 para).
-Robot yok ettikce para kazanir, daha cok kule dikersin! Kuleye dokunup <b>Gelistir</b> dersen bir kelime cikar - dogru soyle, kule guclensin!</p>
-<p><b>Sozcuk:</b> Her dalga baslamadan bir sozcuk cikar; kayitli sesi dinle ve tekrar et. Her bolum sonunda 3 sozcuk tekrari yaparsin!</p>
+Robot yok ettikce para kazanir, daha cok kule dikersin! Kuleye dokununca (para ve bolum uygunsa) kule otomatik gelisir!</p>
+<p><b>Sozcuk:</b> Her dalga baslamadan 1 sozcuk, her bolum sonunda 3 sozcuk cikar; kayitli sesi dinle ve tekrar et.</p>
 <p><b>Dikkat:</b> Robotlarin yarisindan fazlasi buluta ulasirsa bolum bastan baslar!</p>
 <p><b>Dalgalar:</b> Her bolumde 3 dalga gelir; her dalga farkli renkte ve daha kalabalik!</p>
 <p><b>Gelistirme:</b> Kule Kademe 2 icin Bolum 3, Kademe 3 icin Bolum 5, Kademe 4 icin Bolum 7 gerekir.</p>
@@ -111,8 +110,7 @@ Robot yok ettikce para kazanir, daha cok kule dikersin! Kuleye dokunup <b>Gelist
 </div>
 <audio id="oynatici" style="display:none"></audio>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script>
-const BOLUMLER=[
+<script>const BOLUMLER=[
 {robot:5, can:3,hiz:1.3,kelimeler:["kedi","elma","masa","balık","yağmur","kuzu"]},
 {robot:7, can:5,hiz:1.5,kelimeler:["araba","çiçek","bardak","kalem","kelebek","portakal"]},
 {robot:9, can:7,hiz:1.7,kelimeler:["kırmızı elma","güzel kelebek","büyük araba","yeşil ağaç"]},
@@ -122,40 +120,23 @@ const BOLUMLER=[
 {robot:17,can:19,hiz:2.2,kelimeler:["iyi geceler","görüşürüz","hoşça kal","kolay gelsin"]},
 {robot:20,can:24,hiz:2.3,kelimeler:["bugün hava çok güzel","annemi çok seviyorum","yarın okula gideceğim"]},
 ];
-// Her bolum icin farkli yol + slot deseni. Yollar dik acili donuslerle, ~30x30 alanda.
 const PATTERNLER=[
-{ // Bolum 1: S benzeri
-  yol:[{x:-11,z:-9},{x:-4,z:-9},{x:-4,z:-2},{x:5,z:-2},{x:5,z:6},{x:-2,z:6},{x:-2,z:11}],
-  slotlar:[{x:-8,z:-6},{x:-1,z:-6},{x:-7,z:1},{x:1,z:1},{x:8,z:1},{x:2,z:3},{x:-5,z:8},{x:1,z:9}]
-},
-{ // Bolum 2: ust soldan asagi zigzag
-  yol:[{x:-11,z:-10},{x:8,z:-10},{x:8,z:-3},{x:-6,z:-3},{x:-6,z:5},{x:9,z:5},{x:9,z:11}],
-  slotlar:[{x:-3,z:-7},{x:4,z:-7},{x:2,z:-6},{x:-2,z:0},{x:3,z:0},{x:0,z:2},{x:5,z:8},{x:-4,z:3}]
-},
-{ // Bolum 3: sagdan sola inen
-  yol:[{x:11,z:-10},{x:-8,z:-10},{x:-8,z:-2},{x:6,z:-2},{x:6,z:6},{x:-9,z:6},{x:-9,z:11}],
-  slotlar:[{x:2,z:-7},{x:-4,z:-7},{x:-2,z:-5},{x:1,z:1},{x:-4,z:1},{x:3,z:3},{x:-5,z:9},{x:0,z:8}]
-},
-{ // Bolum 4: dar U'lar
-  yol:[{x:-11,z:-11},{x:-2,z:-11},{x:-2,z:-4},{x:-9,z:-4},{x:-9,z:3},{x:7,z:3},{x:7,z:11}],
-  slotlar:[{x:-6,z:-8},{x:2,z:-9},{x:-5,z:-2},{x:1,z:0},{x:4,z:0},{x:-2,z:1},{x:3,z:6},{x:0,z:8}]
-},
-{ // Bolum 5: buyuk C
-  yol:[{x:10,z:-11},{x:-9,z:-11},{x:-9,z:9},{x:2,z:9},{x:2,z:2},{x:8,z:2},{x:8,z:11}],
-  slotlar:[{x:0,z:-8},{x:-5,z:-7},{x:-4,z:-2},{x:-4,z:4},{x:-1,z:6},{x:5,z:-2},{x:5,z:6},{x:1,z:0}]
-},
-{ // Bolum 6: capraz merdiven
-  yol:[{x:-11,z:-10},{x:-3,z:-10},{x:-3,z:-3},{x:4,z:-3},{x:4,z:4},{x:10,z:4},{x:10,z:11}],
-  slotlar:[{x:-7,z:-7},{x:0,z:-7},{x:0,z:-1},{x:-3,z:1},{x:1,z:1},{x:7,z:1},{x:7,z:7},{x:2,z:2}]
-},
-{ // Bolum 7: ust sagdan spiral benzeri
-  yol:[{x:11,z:-9},{x:-6,z:-9},{x:-6,z:0},{x:7,z:0},{x:7,z:7},{x:-8,z:7},{x:-8,z:11}],
-  slotlar:[{x:2,z:-6},{x:-3,z:-6},{x:-3,z:-3},{x:2,z:3},{x:5,z:3},{x:-1,z:4},{x:-5,z:9},{x:0,z:2}]
-},
-{ // Bolum 8: cift kivrim
-  yol:[{x:-11,z:-11},{x:6,z:-11},{x:6,z:-4},{x:-7,z:-4},{x:-7,z:4},{x:8,z:4},{x:8,z:11}],
-  slotlar:[{x:-2,z:-8},{x:3,z:-8},{x:1,z:-6},{x:-3,z:0},{x:2,z:0},{x:-1,z:1},{x:4,z:7},{x:-5,z:2}]
-},
+{ yol:[{x:-11,z:-9},{x:-4,z:-9},{x:-4,z:-2},{x:5,z:-2},{x:5,z:6},{x:-2,z:6},{x:-2,z:11}],
+slotlar:[{x:-8,z:-6},{x:-1,z:-6},{x:-7,z:1},{x:1,z:1},{x:8,z:1},{x:2,z:3},{x:-5,z:8},{x:1,z:9}] },
+{ yol:[{x:-11,z:-10},{x:8,z:-10},{x:8,z:-3},{x:-6,z:-3},{x:-6,z:5},{x:9,z:5},{x:9,z:11}],
+slotlar:[{x:-3,z:-7},{x:4,z:-7},{x:2,z:-6},{x:-2,z:0},{x:3,z:0},{x:0,z:2},{x:5,z:8},{x:-4,z:3}] },
+{ yol:[{x:11,z:-10},{x:-8,z:-10},{x:-8,z:-2},{x:6,z:-2},{x:6,z:6},{x:-9,z:6},{x:-9,z:11}],
+slotlar:[{x:2,z:-7},{x:-4,z:-7},{x:-2,z:-5},{x:1,z:1},{x:-4,z:1},{x:3,z:3},{x:-5,z:9},{x:0,z:8}] },
+{ yol:[{x:-11,z:-11},{x:-2,z:-11},{x:-2,z:-4},{x:-9,z:-4},{x:-9,z:3},{x:7,z:3},{x:7,z:11}],
+slotlar:[{x:-6,z:-8},{x:2,z:-9},{x:-5,z:-2},{x:1,z:0},{x:4,z:0},{x:-2,z:1},{x:3,z:6},{x:0,z:8}] },
+{ yol:[{x:10,z:-11},{x:-9,z:-11},{x:-9,z:9},{x:2,z:9},{x:2,z:2},{x:8,z:2},{x:8,z:11}],
+slotlar:[{x:0,z:-8},{x:-5,z:-7},{x:-4,z:-2},{x:-4,z:4},{x:-1,z:6},{x:5,z:-2},{x:5,z:6},{x:1,z:0}] },
+{ yol:[{x:-11,z:-10},{x:-3,z:-10},{x:-3,z:-3},{x:4,z:-3},{x:4,z:4},{x:10,z:4},{x:10,z:11}],
+slotlar:[{x:-7,z:-7},{x:0,z:-7},{x:0,z:-1},{x:-3,z:1},{x:1,z:1},{x:7,z:1},{x:7,z:7},{x:2,z:2}] },
+{ yol:[{x:11,z:-9},{x:-6,z:-9},{x:-6,z:0},{x:7,z:0},{x:7,z:7},{x:-8,z:7},{x:-8,z:11}],
+slotlar:[{x:2,z:-6},{x:-3,z:-6},{x:-3,z:-3},{x:2,z:3},{x:5,z:3},{x:-1,z:4},{x:-5,z:9},{x:0,z:2}] },
+{ yol:[{x:-11,z:-11},{x:6,z:-11},{x:6,z:-4},{x:-7,z:-4},{x:-7,z:4},{x:8,z:4},{x:8,z:11}],
+slotlar:[{x:-2,z:-8},{x:3,z:-8},{x:1,z:-6},{x:-3,z:0},{x:2,z:0},{x:-1,z:1},{x:4,z:7},{x:-5,z:2}] },
 ];
 let YOL=PATTERNLER[0].yol, SLOTLAR=PATTERNLER[0].slotlar;
 function deseniUygula(bidx){const p=PATTERNLER[bidx%PATTERNLER.length];YOL=p.yol;SLOTLAR=p.slotlar;}
@@ -165,7 +146,6 @@ const KADEMELER=[
 {menzil:6.0,hasar:3,aralik:0.6,maliyet:60, renk:0x2ecc71},
 {menzil:7.0,hasar:5,aralik:0.45,maliyet:100,renk:0xf77f00},
 ];
-// Kademe k'den k+1'e gecis icin gereken bolum: 2k+3 (Kademe1->2:Bolum3, 2->3:Bolum5, 3->4:Bolum7)
 function gerekliBolum(kademe){return 2*kademe+3;}
 const DB_ADI="BulutOyunDB",STORE="kelimeler";
 let panelDB=null,panelKelimeler=[];
@@ -188,13 +168,14 @@ function kelimeKaydiBul(metin){
 return panelKelimeler.find(k=>k.metin===metin && k.sesBlob && k.sesBlob.size>0)||null;
 }
 let scene,camera,renderer,clock,raycaster,fare;
-let bolumIdx=0,skor=80,can=5,oyunAktif=false,durakla=false;
+let bolumIdx=0,skor=80,can=5,oyunAktif=false,durakla=false,elDurdurma=false;
 let robotlar=[],olenler=[],parcaciklar=[],kuleler=[],mermiler=[],slotMeshler=[];
 let yolMeshler=[],usMesh=null;
 const CAN_MAX=8;
 let dalgaKalan=0,dogumSayaci=0;
 let dalgaNo=0,dalgaSayisi=3,dalgaBekleme=0,dalgaRengi=0x6c7a89;
 const KULE_MALIYET=20;
+const CEZA_PARA=10; // 3 basarisiz denemede uygulanan para cezasi
 const DALGA_RENKLERI=[0x6c7a89,0xe74c3c,0x27ae60,0x8e44ad,0xf39c12];
 function baslangicPara(){return 50+bolumIdx*25;}
 let bolumToplamRobot=0,sizanRobot=0,sizanSinir=0;
@@ -250,6 +231,18 @@ kuleler.push({slotIndex,kademe:0,grup,atesSayaci:0});slotMeshler[slotIndex].visi
 function slottakiKule(i){return kuleler.find(k=>k.slotIndex===i);}
 function kuleGorunumGuncelle(kule){scene.remove(kule.grup);kule.grup=kuleGovdesiYap(kule.kademe);
 const s=SLOTLAR[kule.slotIndex];kule.grup.position.set(s.x,0,s.z);scene.add(kule.grup);}
+// Kuleye dokununca: panel ACMADAN otomatik gelistir (para+bolum uygunsa). Bilgi banner'da.
+function kuleGelistirDene(kule){
+const k=kule.kademe;
+if(k>=KADEMELER.length-1){mesajGoster("Kule zaten en yuksek kademede!");return;}
+const gerekli=gerekliBolum(k);
+if(bolumIdx+1<gerekli){mesajGoster("Gelistirme Bolum "+gerekli+"'te acilir!");return;}
+const sonraki=KADEMELER[k+1];
+if(skor<sonraki.maliyet){mesajGoster("Yetersiz para! ("+sonraki.maliyet+" gerekli)");return;}
+skor-=sonraki.maliyet;document.getElementById("skor").textContent=skor;
+kule.kademe=k+1;kuleGorunumGuncelle(kule);
+kuleBannerGoster(KADEMELER[kule.kademe],true);
+}
 function robotYap(renk){const g=new THREE.Group();
 const govdeMat=new THREE.MeshLambertMaterial({color:renk}),kafaMat=new THREE.MeshLambertMaterial({color:renk}),gozMat=new THREE.MeshBasicMaterial({color:0xff3b30});
 const govde=new THREE.Mesh(new THREE.BoxGeometry(0.7,0.8,0.5),govdeMat);govde.position.y=0.9;
@@ -278,7 +271,7 @@ mermiler.forEach(b=>scene.remove(b.mesh));mermiler=[];
 dalgaSayisi=3;dalgaNo=0;
 bolumToplamRobot=0;for(let w2=0;w2<dalgaSayisi;w2++){bolumToplamRobot+=dalgaRobotSayisi(w2);}
 sizanRobot=0;
-sizanSinir=Math.floor(bolumToplamRobot/2); // bu sayidan FAZLASI sizarsa fail
+sizanSinir=Math.floor(bolumToplamRobot/2);
 document.getElementById("bolum").textContent=bolumIdx+1;
 sizanGuncelle();kalanGuncelle();
 dalgaSozcukVeBaslat(0);}
@@ -286,6 +279,7 @@ function kalanGuncelle(){document.getElementById("kalan").textContent=dalgaKalan
 function sizanGuncelle(){document.getElementById("sizan").textContent=sizanRobot;
 document.getElementById("sizanSinir").textContent=sizanSinir;}
 function guncelle(dt){
+if(elDurdurma)return; // manuel pause: hicbir sey ilerlemesin
 if(dalgaKalan>0 && !durakla){dogumSayaci-=dt;
 if(dogumSayaci<=0){robotDogur();dalgaKalan--;dogumSayaci=1.2;kalanGuncelle();}}
 robotlariGuncelle(dt);kulelerGuncelle(dt);mermileriGuncelle(dt);parcaciklariGuncelle(dt);olenleriGuncelle(dt);
@@ -333,45 +327,26 @@ p.position.copy(pos);p.position.y+=1;p.userData.v=new THREE.Vector3((Math.random
 function parcaciklariGuncelle(dt){for(let i=parcaciklar.length-1;i>=0;i--){const p=parcaciklar[i];p.userData.t+=dt;
 p.userData.v.y-=8*dt;p.position.addScaledVector(p.userData.v,dt);
 if(p.userData.t>0.7){scene.remove(p);parcaciklar.splice(i,1);}}}
-function tiklamaIsle(clientX,clientY){if(durakla)return;
+function tiklamaIsle(clientX,clientY){if(durakla||elDurdurma)return;
 fare.x=(clientX/innerWidth)*2-1;fare.y=-(clientY/innerHeight)*2+1;
 raycaster.setFromCamera(fare,camera);
 let hit=raycaster.intersectObjects(kuleler.map(k=>k.grup),true);
 if(hit.length){let obj=hit[0].object;while(obj.parent&&!kuleler.some(k=>k.grup===obj))obj=obj.parent;
-const kule=kuleler.find(k=>k.grup===obj);if(kule){kulePanelAc(kule);return;}}
+const kule=kuleler.find(k=>k.grup===obj);if(kule){kuleGelistirDene(kule);return;}}
 hit=raycaster.intersectObjects(slotMeshler.filter(m=>m.visible),false);
 if(hit.length){kuleDik(hit[0].object.userData.slotIndex);}}
-let seciliKule=null;
-function kulePanelAc(kule){seciliKule=kule;
-const k=kule.kademe,son=k>=KADEMELER.length-1;
-const su=KADEMELER[k];
-let bilgi="Kademe "+(k+1)+"/"+KADEMELER.length+"<br>Menzil "+su.menzil.toFixed(1)+" | Hasar "+su.hasar+" | Hiz "+(1/su.aralik).toFixed(1)+"/sn";
-const btn=document.getElementById("upgradeBtn");
-if(son){bilgi+="<br><b>En yuksek kademe!</b>";btn.style.display="none";}
-else{const sonraki=KADEMELER[k+1];const gerekli=gerekliBolum(k);
-bilgi+="<br><br>Gelistir -> Kademe "+(k+2)+" (Menzil "+sonraki.menzil.toFixed(1)+", Hasar "+sonraki.hasar+")<br><b>Maliyet: "+sonraki.maliyet+" para</b>";
-btn.style.display="";
-if(bolumIdx+1<gerekli){bilgi+="<br><b>Bolum "+gerekli+"'te acilir</b>";btn.disabled=true;btn.textContent="Kilitli (Bolum "+gerekli+")";}
-else{btn.disabled=false;btn.textContent="Gelistir ("+sonraki.maliyet+")";}}
-document.getElementById("kuleBilgi").innerHTML=bilgi;
-document.getElementById("kulePanel").classList.add("acik");durakla=true;}
-function kulePanelKapat(){document.getElementById("kulePanel").classList.remove("acik");seciliKule=null;durakla=false;}
-function upgradeBaslat(){if(!seciliKule)return;
-const sonrakiKademe=seciliKule.kademe+1;
-if(sonrakiKademe>=KADEMELER.length)return;
-const gerekli=gerekliBolum(seciliKule.kademe);
-if(bolumIdx+1<gerekli){mesajGoster("Bu gelistirme Bolum "+gerekli+"'te acilir!");return;}
-const maliyet=KADEMELER[sonrakiKademe].maliyet;
-if(skor<maliyet){mesajGoster("Yetersiz para! ("+maliyet+" gerekli)");return;}
-document.getElementById("kulePanel").classList.remove("acik");
-const havuz=bolumKelimeleri(bolumIdx);
-const kelime=havuz[Math.floor(Math.random()*havuz.length)];
-telaffuzSor(kelime,1,1,()=>{
-skor-=maliyet;document.getElementById("skor").textContent=skor;
-seciliKule.kademe=sonrakiKademe;kuleGorunumGuncelle(seciliKule);
-mesajGoster("Kule Kademe "+(seciliKule.kademe+1)+"!");
-seciliKule=null;durakla=false;
-},null);}
+
+// PAUSE / DEVAM (manuel). Sozcuk paneli acikken devre disi.
+function oyunDuraklat(){
+if(document.getElementById("panel").classList.contains("acik"))return;
+elDurdurma=!elDurdurma;
+const btn=document.getElementById("duraklaBtn");
+const kapla=document.getElementById("duraklaKapla");
+if(elDurdurma){btn.textContent="▶ Devam";kapla.classList.add("gor");}
+else{btn.textContent="⏸ Duraklat";kapla.classList.remove("gor");if(clock)clock.getDelta();}
+}
+function duraklaBtnGoster(g){const b=document.getElementById("duraklaBtn");if(b)b.classList.toggle("gor",!!g);}
+
 let sinavKelimeler=[],sinavIdx=0;
 function bolumSonuSinav(){
 document.getElementById("kutlama").classList.remove("gor","sadece-devam");
@@ -407,9 +382,17 @@ document.getElementById("panel").classList.remove("acik");}
 function telaffuzBasarili(){document.getElementById("durum").innerHTML="Harika!";
 const cb=basariCb;aktifKelime=null;basariCb=null;
 setTimeout(()=>{telaffuzPanelKapat();if(cb)cb();},700);}
+// 3 deneme sonunda: ceza uygula, testi gec, oyun devam etsin
+function telaffuzPesEt(){
+skor=Math.max(0,skor-CEZA_PARA);
+document.getElementById("skor").textContent=skor;
+document.getElementById("durum").innerHTML="Sonra tekrar deneriz. (-"+CEZA_PARA+" para)";
+const cb=basariCb;aktifKelime=null;basariCb=null;
+setTimeout(()=>{telaffuzPanelKapat();if(cb)cb();},1100);
+}
 function telaffuzBasarisiz(){deneme++;
-if(deneme>=MAX_DENEME){document.getElementById("durum").innerHTML="Sorun degil, tekrar dinle!";deneme=0;setTimeout(tekrarDinle,900);}
-else{document.getElementById("durum").innerHTML="Az kaldi, tekrar dinliyorum!";setTimeout(tekrarDinle,700);}}
+if(deneme>=MAX_DENEME){telaffuzPesEt();return;}
+document.getElementById("durum").innerHTML="Az kaldi, tekrar dinliyorum!";setTimeout(tekrarDinle,700);}
 let secilenSes=null;
 function sesleriCoz(){if(!("speechSynthesis"in window))return;
 const v=speechSynthesis.getVoices();if(!v.length)return;
@@ -445,12 +428,12 @@ if(ev.error==="not-allowed"||ev.error==="service-not-allowed"){mikrofonReddedild
 taniyici.onend=()=>{dinliyor=false;if(izinDenemesi){izinDenemesi=false;return;}
 clearTimeout(sessizlikTimer);
 if(!sonucGeldi && aktifKelime){deneme++;
-if(deneme>=MAX_DENEME){document.getElementById("durum").innerHTML="Seni duyamadim, tekrar dinle!";deneme=0;setTimeout(tekrarDinle,700);}
-else{document.getElementById("durum").innerHTML="Seni duyamadim, tekrar dinliyorum!";setTimeout(tekrarDinle,600);}}};}
+if(deneme>=MAX_DENEME){telaffuzPesEt();return;}
+document.getElementById("durum").innerHTML="Seni duyamadim, tekrar dinliyorum!";setTimeout(tekrarDinle,600);}};}
 function mikrofonIzniAl(){if(!TanimaAPI||mikrofonReddedildi)return;if(!taniyici)taniyiciKur();
 try{izinDenemesi=true;taniyici.start();}catch(_){izinDenemesi=false;}}
 function dinlemeyeBasla(){if(!aktifKelime)return;
-if(!TanimaAPI||mikrofonReddedildi){document.getElementById("durum").innerHTML="Mikrofon yok. Tekrar dinle.";setTimeout(tekrarDinle,1200);return;}
+if(!TanimaAPI||mikrofonReddedildi){document.getElementById("durum").innerHTML="Mikrofon yok, gecildi.";setTimeout(telaffuzPesEt,1000);return;}
 if(dinliyor)return;if(!taniyici)taniyiciKur();
 sonucGeldi=false;dinliyor=true;document.getElementById("durum").textContent="Dinliyorum...";
 clearTimeout(sessizlikTimer);sessizlikTimer=setTimeout(()=>{try{taniyici.stop();}catch(_){}} ,5000);
@@ -468,7 +451,10 @@ const esik=Math.max(1,Math.floor(ha.length*0.4));if(mesafe(sa,ha)<=esik)return t
 const ilk=sa.split(" ")[0];if(ha.indexOf(" ")<0&&mesafe(ilk,ha)<=esik)return true;return false;}
 
 function sagligiCiz(){document.getElementById("saglik").textContent="HP: "+Math.max(0,can)+"/"+CAN_MAX;}
-function kuleBannerGoster(su){const b=document.getElementById("kuleBanner");if(!b)return;b.innerHTML="\u2705 Kule dikildi! \u2022 Menzil "+su.menzil.toFixed(1)+" \u2022 Hasar "+su.hasar+" \u2022 H\u0131z "+(1/su.aralik).toFixed(1)+"/sn \u2022 (-"+KULE_MALIYET+" para)";b.classList.add("gor");clearTimeout(kuleBannerGoster._t);kuleBannerGoster._t=setTimeout(()=>b.classList.remove("gor"),2600);}
+function kuleBannerGoster(su,gelisti){const b=document.getElementById("kuleBanner");if(!b)return;
+const bas=gelisti?"\u2b06\ufe0f Kule gelisti!":"\u2705 Kule dikildi!";
+b.innerHTML=bas+" \u2022 Menzil "+su.menzil.toFixed(1)+" \u2022 Hasar "+su.hasar+" \u2022 H\u0131z "+(1/su.aralik).toFixed(1)+"/sn";
+b.classList.add("gor");clearTimeout(kuleBannerGoster._t);kuleBannerGoster._t=setTimeout(()=>b.classList.remove("gor"),2600);}
 function mesajGoster(t){const m=document.getElementById("mesaj");m.textContent=t;m.classList.add("gor");
 clearTimeout(mesajGoster._t);mesajGoster._t=setTimeout(()=>m.classList.remove("gor"),1600);}
 function bolumBitti(){const son=bolumIdx>=BOLUMLER.length-1;
@@ -477,13 +463,13 @@ btn.style.display="none";
 btn.onclick=bolumSonuSinav;
 document.getElementById("kutlamaEmoji").textContent="";
 document.getElementById("kutlamaBaslik").textContent=son?"Aferin Bulut! Tüm bölümleri bitirdin.":"";
-document.getElementById("kutlama").classList.add("gor","sadece-devam");durakla=true;
+document.getElementById("kutlama").classList.add("gor","sadece-devam");durakla=true;duraklaBtnGoster(false);
 const anons=son?"Aferin Bulut! Tüm bölümleri bitirdin. Harikasın!":"Aferin Bulut! Şimdi devam etmek için sözcükleri tekrar edelim.";
 const devamGoster=()=>{btn.textContent="Devam";btn.style.display="";};
 seslendir(anons,devamGoster);
 setTimeout(devamGoster,6000);}
 function bolumBasarisiz(){if(!oyunAktif&&durakla)return;
-oyunAktif=false;durakla=true;
+oyunAktif=false;durakla=true;duraklaBtnGoster(false);
 robotlar.forEach(r=>scene.remove(r.grup));robotlar=[];
 mermiler.forEach(b=>scene.remove(b.mesh));mermiler=[];
 document.getElementById("kutlamaEmoji").textContent="Olmadi";
@@ -498,7 +484,7 @@ kuleler.forEach(k=>scene.remove(k.grup));kuleler=[];
 sahneDeseniTemizle();deseniUygula(bolumIdx);sahneDeseniKur();
 can=5;sagligiCiz();
 skor=baslangicPara();document.getElementById("skor").textContent=skor;
-durakla=false;oyunAktif=true;
+durakla=false;oyunAktif=true;duraklaBtnGoster(true);
 bolumBaslat();mesajGoster("Bolum "+(bolumIdx+1)+" tekrar basliyor!");}
 function gercektenSonrakiBolum(){
 document.getElementById("panel").classList.remove("acik");
@@ -509,7 +495,7 @@ kuleler.forEach(k=>scene.remove(k.grup));kuleler=[];
 sahneDeseniTemizle();deseniUygula(bolumIdx);sahneDeseniKur();
 mermiler.forEach(b=>scene.remove(b.mesh));mermiler=[];
 skor=baslangicPara();document.getElementById("skor").textContent=skor;
-durakla=false;oyunAktif=true;
+durakla=false;oyunAktif=true;duraklaBtnGoster(true);
 bolumBaslat();mesajGoster("Bolum "+(bolumIdx+1)+" basliyor!");}
 function oyunBitti(){oyunAktif=false;durakla=true;
 document.getElementById("kutlamaEmoji").textContent="Olmadi";
@@ -519,7 +505,7 @@ document.getElementById("kutlama").classList.add("gor");
 document.getElementById("devamBtn").onclick=()=>location.reload();}
 function tikOlayi(e){if(!oyunAktif&&!durakla)return;
 const t=e.changedTouches?e.changedTouches[0]:e;
-if(t.target.closest&&(t.target.closest("#panel")||t.target.closest("#kulePanel")||t.target.closest("#kutlama")||t.target.closest("#basla")||t.target.closest("button")))return;
+if(t.target.closest&&(t.target.closest("#panel")||t.target.closest("#kutlama")||t.target.closest("#basla")||t.target.closest("button"))) return;
 tiklamaIsle(t.clientX,t.clientY);}
 async function oyunuBaslat(){
 document.getElementById("basla").style.display="none";
@@ -527,12 +513,12 @@ await panelDbAc();await panelKelimeleriYukle();
 if("speechSynthesis"in window){sesleriCoz();const w=new SpeechSynthesisUtterance(" ");w.volume=0;speechSynthesis.speak(w);}
 mikrofonIzniAl();
 bolumIdx=0;skor=baslangicPara();document.getElementById("skor").textContent=skor;
-can=5;sagligiCiz();oyunAktif=true;durakla=false;
+can=5;sagligiCiz();oyunAktif=true;durakla=false;elDurdurma=false;duraklaBtnGoster(true);
 sahneDeseniTemizle();deseniUygula(bolumIdx);sahneDeseniKur();
 bolumBaslat();
 mesajGoster("Bolum 1 basliyor!");}
 function dongu(){requestAnimationFrame(dongu);const dt=Math.min(clock.getDelta(),0.05);
-if(oyunAktif||durakla)guncelle(dt);renderer.render(scene,camera);}
+if((oyunAktif||durakla)&&!elDurdurma)guncelle(dt);renderer.render(scene,camera);}
 addEventListener("resize",()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);});
 addEventListener("click",tikOlayi);
 addEventListener("touchstart",e=>{tikOlayi(e);},{passive:true});

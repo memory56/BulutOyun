@@ -21,7 +21,7 @@ button:active{transform:translateY(1px);}
 .kart{background:#fff;border-radius:12px;padding:12px;box-shadow:0 1px 5px rgba(0,0,0,.07);margin-bottom:10px;
 display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
 .kmetin{font-size:1.15rem;font-weight:800;flex:1;min-width:120px;}
-.rozet{background:#eef4fb;color:#4895ef;border-radius:8px;padding:2px 8px;font-size:.75rem;font-weight:800;}
+.rozetSec{background:#eef4fb;color:#4895ef;border:1px solid #cdd8e3;border-radius:8px;padding:4px 6px;font-size:.8rem;font-weight:800;cursor:pointer;}
 .durum{font-size:.75rem;padding:2px 8px;border-radius:8px;font-weight:700;}
 .var{background:#d3f9d8;color:#2b8a3e;}
 .yok{background:#ffe3e3;color:#c92a2a;}
@@ -37,7 +37,7 @@ display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
 <h1>☁️ Bulut Oyun — Yönetici Paneli</h1>
 <p class="aciklama">Kelime/sözcük ekleyin, kendi sesinizle kaydedin. Sesler bu cihazda saklanır; JSON olarak yedekleyip başka cihaza taşıyabilirsiniz.</p>
 
-<div class="bilgi">🎤 Kayıt için tarayıcı mikrofon izni ister. Kayıtlar bu cihazın tarayıcısında (IndexedDB) tutulur — oyun aynı cihazda açıldığında bu sesleri kullanır.</div>
+<div class="bilgi">🎤 Kayıt için tarayıcı mikrofon izni ister. Kayıtlar bu cihazın tarayıcısında (IndexedDB) tutulur — oyun aynı cihazda açıldığında bu sesleri kullanır. Bir sözcüğün bölümünü değiştirmek için karttaki <b>B1</b> rozetini kullanın.</div>
 
 <div class="cubuk">
 <button class="b-yesil" onclick="yedekIndir()">⬇️ JSON Yedek İndir</button>
@@ -54,6 +54,10 @@ display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
 <option value="2">Bölüm 2</option>
 <option value="3">Bölüm 3</option>
 <option value="4">Bölüm 4</option>
+<option value="5">Bölüm 5</option>
+<option value="6">Bölüm 6</option>
+<option value="7">Bölüm 7</option>
+<option value="8">Bölüm 8</option>
 </select>
 </div>
 <button class="b-turuncu" style="width:100%" onclick="kelimeEkle()">➕ Kelime Ekle</button>
@@ -70,6 +74,7 @@ DB: BulutOyunDB | store: kelimeler
 kayıt: {id, metin, bolum, sesBlob(Blob|null), olusturma}
 ============================================================ */
 const DB_ADI="BulutOyunDB", STORE="kelimeler";
+const BOLUM_SAYISI=8;
 let db=null;
 
 function dbAc(){
@@ -106,7 +111,7 @@ t.onsuccess=()=>cs(); t.onerror=()=>red(t.error);
 }
 
 /* ============================================================
-KELİME EKLE / SİL / LİSTELE
+KELİME EKLE / SİL / BÖLÜM DEĞİŞTİR / LİSTELE
 ============================================================ */
 function idUret(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
 
@@ -126,6 +131,16 @@ await kelimeSil(id);
 listeCiz();
 }
 
+// Bir sözcüğün bölümünü değiştir (ses ve diğer bilgiler korunur)
+async function bolumDegistir(id,yeniBolum){
+const kelimeler=await tumKelimeler();
+const k=kelimeler.find(x=>x.id===id);
+if(!k) return;
+k.bolum=parseInt(yeniBolum,10);
+await kelimeKaydet(k);
+listeCiz();
+}
+
 async function listeCiz(){
 const kelimeler=await tumKelimeler();
 const liste=document.getElementById("liste");
@@ -134,11 +149,25 @@ liste.innerHTML="";
 for(const k of kelimeler){
 const kart=document.createElement("div"); kart.className="kart";
 const sesVar=!!(k.sesBlob && k.sesBlob.size>0);
-kart.innerHTML=`
-<span class="rozet">B${k.bolum}</span>
-<span class="kmetin">${k.metin}</span>
-<span class="durum ${sesVar?'var':'yok'}">${sesVar?'🎤 ses var':'ses yok'}</span>
-`;
+
+const rozet=document.createElement("select");
+rozet.className="rozetSec";
+rozet.title="Bölümü değiştir";
+for(let b=1;b<=BOLUM_SAYISI;b++){
+const o=document.createElement("option");
+o.value=b; o.textContent="B"+b;
+if(b===k.bolum) o.selected=true;
+rozet.appendChild(o);
+}
+rozet.onchange=()=>bolumDegistir(k.id,rozet.value);
+
+const metinEl=document.createElement("span");
+metinEl.className="kmetin"; metinEl.textContent=k.metin;
+
+const durumEl=document.createElement("span");
+durumEl.className="durum "+(sesVar?"var":"yok");
+durumEl.textContent=sesVar?"🎤 ses var":"ses yok";
+
 const kayitBtn=document.createElement("button");
 kayitBtn.className="b-kirmizi mini"; kayitBtn.textContent="⏺ Kaydet";
 kayitBtn.onclick=()=>kayitBaslatDur(k.id,kayitBtn);
@@ -149,7 +178,8 @@ dinleBtn.onclick=()=>sesDinlet(k.id);
 const silBtn=document.createElement("button");
 silBtn.className="b-gri mini"; silBtn.textContent="🗑";
 silBtn.onclick=()=>silTikla(k.id);
-kart.append(kayitBtn,dinleBtn,silBtn);
+
+kart.append(rozet,metinEl,durumEl,kayitBtn,dinleBtn,silBtn);
 liste.appendChild(kart);
 }
 }
@@ -200,7 +230,7 @@ function blobToBase64(blob){
 return new Promise(cs=>{
 if(!blob){ cs(null); return; }
 const r=new FileReader();
-r.onloadend=()=>cs(r.result); // data:...;base64,...
+r.onloadend=()=>cs(r.result);
 r.readAsDataURL(blob);
 });
 }
@@ -244,7 +274,7 @@ document.getElementById("yukleInput").value="";
 }
 
 /* ============================================================
-ÖRNEK KELİMELER (oyundaki BOLUMLER ile uyumlu)
+ÖRNEK KELİMELER (oyundaki 8 BÖLÜM ile uyumlu)
 ============================================================ */
 async function varsayilanlariEkle(){
 const varsayilan=[
@@ -252,6 +282,10 @@ const varsayilan=[
 {b:2,liste:["araba","çiçek","bardak","kalem","kelebek","portakal"]},
 {b:3,liste:["kırmızı elma","güzel kelebek","büyük araba","yeşil ağaç"]},
 {b:4,liste:["günaydın","teşekkür ederim","nasılsın","afiyet olsun"]},
+{b:5,liste:["okul","defter","pencere","kitap","köprü","deniz"]},
+{b:6,liste:["sarı otobüs","tatlı çikolata","hızlı tren","küçük köpek"]},
+{b:7,liste:["iyi geceler","görüşürüz","hoşça kal","kolay gelsin"]},
+{b:8,liste:["bugün hava çok güzel","annemi çok seviyorum","yarın okula gideceğim"]},
 ];
 const mevcut=await tumKelimeler();
 const mevcutMetin=new Set(mevcut.map(k=>k.bolum+"|"+k.metin));

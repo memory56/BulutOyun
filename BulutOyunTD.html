@@ -510,7 +510,76 @@ akis.getTracks().forEach(t=>t.stop());}
 catch(_){mikrofonReddedildi=true;}
 if(TanimaAPI&&!taniyici)taniyiciKur();
 }
-function dinlemeyeBasla(){if(!aktifKelime)return;
+
+// ===== AZURE TELAFFUZ DEGERLENDIRME (esik %80) =====
+var AZURE_ESIK=80;
+function azureAnahtar(){try{return (localStorage.getItem("bulutAzureKey")||"").trim();}catch(_){return "";}}
+function azureBolge(){try{return (localStorage.getItem("bulutAzureRegion")||"westeurope").trim();}catch(_){return "westeurope";}}
+function azureAktif(){return !!azureAnahtar();}
+// PCM 16k mono WAV kodlayici
+function wavKodla(f32,orn){
+ var len=f32.length,buf=new ArrayBuffer(44+len*2),v=new DataView(buf),i;
+ function ys(o,s){for(i=0;i<s.length;i++)v.setUint8(o+i,s.charCodeAt(i));}
+ ys(0,"RIFF");v.setUint32(4,36+len*2,true);ys(8,"WAVE");ys(12,"fmt ");
+ v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);
+ v.setUint32(24,orn,true);v.setUint32(28,orn*2,true);v.setUint16(32,2,true);
+ v.setUint16(34,16,true);ys(36,"data");v.setUint32(40,len*2,true);
+ var o=44;for(i=0;i<len;i++){var s=Math.max(-1,Math.min(1,f32[i]));v.setInt16(o,s<0?s*0x8000:s*0x7FFF,true);o+=2;}
+ return new Blob([v],{type:"audio/wav"});
+}
+function yenidenOrnekle(data,girisOrn,hedefOrn){
+ if(girisOrn===hedefOrn)return data;
+ var oran=girisOrn/hedefOrn,yeni=Math.round(data.length/oran),cikti=new Float32Array(yeni);
+ for(var i=0;i<yeni;i++){var idx=i*oran,i0=Math.floor(idx),i1=Math.min(i0+1,data.length-1),fr=idx-i0;cikti[i]=data[i0]*(1-fr)+data[i1]*fr;}
+ return cikti;
+}
+async function azureKaydet(saniye){
+ var akis=await navigator.mediaDevices.getUserMedia({audio:true});
+ var mr=window.__mikAudioCtx||(window.__mikAudioCtx=new (window.AudioContext||window.webkitAudioContext)());
+ var src=mr.createMediaStreamSource(akis),parcalar=[],islemci=mr.createScriptProcessor(4096,1,1);
+ src.connect(islemci);islemci.connect(mr.destination);
+ islemci.onaudioprocess=function(e){parcalar.push(new Float32Array(e.inputBuffer.getChannelData(0)));};
+ await new Promise(function(r){setTimeout(r,saniye*1000);});
+ islemci.disconnect();src.disconnect();akis.getTracks().forEach(function(tr){tr.stop();});
+ var top=0;parcalar.forEach(function(p){top+=p.length;});
+ var birlesik=new Float32Array(top),ofs=0;parcalar.forEach(function(p){birlesik.set(p,ofs);ofs+=p.length;});
+ var yeni=yenidenOrnekle(birlesik,mr.sampleRate,16000);
+ return wavKodla(yeni,16000);
+}
+async function azureIleDinle(){
+ var kelime=aktifKelime;if(!kelime)return;
+ var d=document.getElementById("durum");if(d)d.innerHTML="Dinliyorum...";
+ try{
+  var wav=await azureKaydet(3);
+  var cfg={referenceText:kelime,gradingSystem:"HundredMark",granularity:"Word",dimension:"Comprehensive"};
+  var b64=btoa(JSON.stringify(cfg));
+  var url="https://"+azureBolge()+".stt.speech.microsoft.com/speech/recognition/conversation/cognitiveservices/v1?language=tr-TR";
+  var yanit=await fetch(url,{method:"POST",headers:{
+    "Ocp-Apim-Subscription-Key":azureAnahtar(),
+    "Content-Type":"audio/wav; codecs=audio/pcm; samplerate=16000",
+    "Pronunciation-Assessment":b64,
+    "Accept":"application/json"
+  },body:wav});
+  if(!yanit.ok){throw new Error("Azure "+yanit.status);}
+  var js=await yanit.json();
+  var puan=0,tanidi="";
+  try{
+    var nb=js.NBest&&js.NBest[0];
+    if(nb){tanidi=nb.Display||nb.Lexical||"";puan=(nb.PronunciationAssessment&&nb.PronunciationAssessment.AccuracyScore)||0;}
+  }catch(_){}
+  var dd=document.getElementById("duydum");if(dd)dd.textContent="duydugum: "+tanidi+" ("+Math.round(puan)+")";
+  if(aktifKelime && puan>=AZURE_ESIK){telaffuzBasarili();}
+  else{telaffuzBasarisiz();}
+ }catch(hata){
+  // Azure basarisiz -> tarayici tanimaya geri don
+  azureHatasi=true;
+  dinlemeyeBaslaTarayici();
+ }
+}
+
+var azureHatasi=false;
+function dinlemeyeBasla(){if(azureAktif() && !azureHatasi){azureIleDinle();return;} dinlemeyeBaslaTarayici();}
+function dinlemeyeBaslaTarayici(){if(!aktifKelime)return;
 if(!TanimaAPI||mikrofonReddedildi){document.getElementById("durum").innerHTML="Mikrofon yok, gecildi.";setTimeout(telaffuzPesEt,1000);return;}
 if(dinliyor)return;if(!taniyici)taniyiciKur();
 sonucGeldi=false;dinliyor=true;document.getElementById("durum").textContent="Dinliyorum...";

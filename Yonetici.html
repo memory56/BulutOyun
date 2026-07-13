@@ -29,6 +29,13 @@ display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
 .kayitAktif{background:#e63946 !important;animation:yaniyor 1s infinite;}
 @keyframes yaniyor{50%{opacity:.5;}}
 #gizliAudio{display:none;}
+.azure{background:#fff;border-radius:14px;padding:14px;box-shadow:0 2px 8px rgba(0,0,0,.08);margin-bottom:16px;border:2px solid #7048e8;}
+.azure h2{font-size:1.05rem;color:#7048e8;margin-bottom:6px;}
+.azure .not{font-size:.8rem;color:#5a6b7b;margin-bottom:10px;}
+.azure input{width:100%;padding:10px;border:1px solid #cdd8e3;border-radius:8px;font-size:.95rem;margin-bottom:8px;}
+.azure .durumEt{font-size:.8rem;font-weight:800;padding:3px 8px;border-radius:8px;display:inline-block;margin-bottom:8px;}
+.azure .aktif{background:#d3f9d8;color:#2b8a3e;}
+.azure .pasif{background:#ffe3e3;color:#c92a2a;}
 .bilgi{font-size:.8rem;color:#5a6b7b;background:#fff8e1;border:1px solid #ffe08a;border-radius:8px;padding:8px 10px;margin-bottom:12px;}
 </style>
 </head>
@@ -38,6 +45,18 @@ display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
 <p class="aciklama">Kelime/sözcük ekleyin, kendi sesinizle kaydedin. Sesler bu cihazda saklanır; JSON olarak yedekleyip başka cihaza taşıyabilirsiniz.</p>
 
 <div class="bilgi">🎤 Kayıt için tarayıcı mikrofon izni ister. Kayıtlar bu cihazın tarayıcısında (IndexedDB) tutulur — oyun aynı cihazda açıldığında bu sesleri kullanır. Bir sözcüğün bölümünü değiştirmek için karttaki <b>B1</b> rozetini kullanın.</div>
+
+<div class="azure">
+<h2>🗣️ Azure Telaffuz Değerlendirme Ayarı</h2>
+<p class="not">Oyunda sesli harf düzeyinde tam telaffuz denetimi için Azure Speech anahtarınızı girin. Bilgiler yalnızca <b>bu cihazın tarayıcısında</b> (localStorage) saklanır, hiçbir yere gönderilmez.</p>
+<span id="azureDurum" class="durumEt pasif">Anahtar girilmedi</span>
+<input id="azureKey" type="password" placeholder="Azure Speech anahtarı (KEY 1)" autocomplete="off">
+<input id="azureRegion" placeholder="Bölge / Region (örn: westeurope)" autocomplete="off">
+<div class="satir">
+<button class="b-mor" onclick="azureKaydet()">💾 Kaydet</button>
+<button class="b-gri" onclick="azureTemizle()">🗑 Temizle</button>
+</div>
+</div>
 
 <div class="cubuk">
 <button class="b-yesil" onclick="yedekIndir()">⬇️ JSON Yedek İndir</button>
@@ -302,9 +321,41 @@ listeCiz();
 }
 
 /* ============================================================
+AZURE TELAFFUZ AYARI (localStorage)
+Anahtar/bolge yalnizca bu cihazin tarayicisinda tutulur.
+============================================================ */
+const AZURE_KEY_LS="bulutAzureKey", AZURE_REGION_LS="bulutAzureRegion";
+function azureDurumGuncelle(){
+const k=localStorage.getItem(AZURE_KEY_LS)||"";
+const r=localStorage.getItem(AZURE_REGION_LS)||"";
+const el=document.getElementById("azureDurum");
+if(k&&r){el.textContent="✓ Anahtar kayitli (bolge: "+r+")";el.className="durumEt aktif";}
+else{el.textContent="Anahtar girilmedi";el.className="durumEt pasif";}
+}
+function azureKaydet(){
+const k=document.getElementById("azureKey").value.trim();
+const r=document.getElementById("azureRegion").value.trim().toLowerCase();
+if(!k||!r){alert("Hem anahtar hem de bolge gerekli.");return;}
+localStorage.setItem(AZURE_KEY_LS,k);
+localStorage.setItem(AZURE_REGION_LS,r);
+document.getElementById("azureKey").value="";
+azureDurumGuncelle();
+alert("Azure ayarlari bu cihaza kaydedildi.");
+}
+function azureTemizle(){
+if(!confirm("Kayitli Azure anahtari silinsin mi?"))return;
+localStorage.removeItem(AZURE_KEY_LS);
+localStorage.removeItem(AZURE_REGION_LS);
+document.getElementById("azureKey").value="";
+document.getElementById("azureRegion").value="";
+azureDurumGuncelle();
+}
+
+/* ============================================================
 BAŞLAT
 ============================================================ */
-(async ()=>{ await dbAc(); listeCiz(); })();
+(async ()=>{ await dbAc(); listeCiz(); azureDurumGuncelle();
+const r=localStorage.getItem(AZURE_REGION_LS); if(r)document.getElementById("azureRegion").value=r; })();
 </script>
 </body>
 </html>

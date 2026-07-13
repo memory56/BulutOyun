@@ -96,7 +96,7 @@ flex-direction:column;align-items:center;justify-content:center;gap:14px;text-al
 <div class="robotEmoji">Bulut Kule Robot</div>
 <h1>Bulut'un Kule Savunmasi</h1>
 <p><b>Amac:</b> Robotlar yoldan bulutuna yuruyor! Bos yerlere dokunup kule dik (her kule 20 para).
-Robot yok ettikce para kazanir, daha cok kule dikersin! Kuleye dokununca (para ve bolum uygunsa) kule otomatik gelisir!</p>
+Robot yok ettikce para kazanir, daha cok kule dikersin! Kuleye tekrar dokununca (para ve bolum uygunsa) kule otomatik gelisir!</p>
 <p><b>Sozcuk:</b> Her dalga baslamadan 1 sozcuk, her bolum sonunda 3 sozcuk cikar; kayitli sesi dinle ve tekrar et.</p>
 <p><b>Dikkat:</b> Robotlarin yarisindan fazlasi buluta ulasirsa bolum bastan baslar!</p>
 <p><b>Dalgalar:</b> Her bolumde 3 dalga gelir; her dalga farkli renkte ve daha kalabalik!</p>
@@ -227,11 +227,13 @@ g.add(taban,govde,namlu);return g;}
 function kuleDik(slotIndex){if(skor<KULE_MALIYET){mesajGoster("Yetersiz para! Kule "+KULE_MALIYET+" para");return;}
 skor-=KULE_MALIYET;document.getElementById("skor").textContent=skor;
 const s=SLOTLAR[slotIndex],grup=kuleGovdesiYap(0);grup.position.set(s.x,0,s.z);scene.add(grup);
-kuleler.push({slotIndex,kademe:0,grup,atesSayaci:0});slotMeshler[slotIndex].visible=false;kuleBannerGoster(KADEMELER[0]);}
+kuleler.push({slotIndex,kademe:0,grup,atesSayaci:0});slotMeshler[slotIndex].visible=false;
+kuleDikildiBanner();}
 function slottakiKule(i){return kuleler.find(k=>k.slotIndex===i);}
 function kuleGorunumGuncelle(kule){scene.remove(kule.grup);kule.grup=kuleGovdesiYap(kule.kademe);
 const s=SLOTLAR[kule.slotIndex];kule.grup.position.set(s.x,0,s.z);scene.add(kule.grup);}
-// Kuleye dokununca: panel ACMADAN otomatik gelistir (para+bolum uygunsa). Bilgi banner'da.
+// Kuleye TEKRAR dokununca: panel ACMADAN otomatik gelistir (para+bolum uygunsa). Bilgi banner'da.
+// Ilk yerlestirmede yukseltme bilgisi GOSTERILMEZ; sadece "Kule dikildi!" cikar.
 function kuleGelistirDene(kule){
 const k=kule.kademe;
 if(k>=KADEMELER.length-1){mesajGoster("Kule zaten en yuksek kademede!");return;}
@@ -346,8 +348,8 @@ if(elDurdurma){btn.textContent="▶ Devam";kapla.classList.add("gor");}
 else{btn.textContent="⏸ Duraklat";kapla.classList.remove("gor");if(clock)clock.getDelta();}
 }
 function duraklaBtnGoster(g){const b=document.getElementById("duraklaBtn");if(b)b.classList.toggle("gor",!!g);}
-
 let sinavKelimeler=[],sinavIdx=0;
+// Bolum sonu: dalga oncesi sozcuk prosesinin AYNISI, arka arkaya 3 defa. Ayri panel/Devam yok.
 function bolumSonuSinav(){
 document.getElementById("kutlama").classList.remove("gor","sadece-devam");
 const havuz=bolumKelimeleri(bolumIdx).slice();
@@ -455,25 +457,36 @@ function kuleBannerGoster(su,gelisti){const b=document.getElementById("kuleBanne
 const bas=gelisti?"\u2b06\ufe0f Kule gelisti!":"\u2705 Kule dikildi!";
 b.innerHTML=bas+" \u2022 Menzil "+su.menzil.toFixed(1)+" \u2022 Hasar "+su.hasar+" \u2022 H\u0131z "+(1/su.aralik).toFixed(1)+"/sn";
 b.classList.add("gor");clearTimeout(kuleBannerGoster._t);kuleBannerGoster._t=setTimeout(()=>b.classList.remove("gor"),2600);}
+// Ilk yerlestirmede: yukseltme bilgisi olmadan sadece kisa "Kule dikildi!" banner'i.
+function kuleDikildiBanner(){const b=document.getElementById("kuleBanner");if(!b)return;
+b.innerHTML="\u2705 Kule dikildi!";
+b.classList.add("gor");clearTimeout(kuleBannerGoster._t);kuleBannerGoster._t=setTimeout(()=>b.classList.remove("gor"),2200);}
 function mesajGoster(t){const m=document.getElementById("mesaj");m.textContent=t;m.classList.add("gor");
 clearTimeout(mesajGoster._t);mesajGoster._t=setTimeout(()=>m.classList.remove("gor"),1600);}
-function bolumBitti(){const son=bolumIdx>=BOLUMLER.length-1;
-const btn=document.getElementById("devamBtn");
-btn.style.display="none";
-btn.onclick=bolumSonuSinav;
-document.getElementById("kutlamaEmoji").textContent="";
-document.getElementById("kutlamaBaslik").textContent=son?"Aferin Bulut! Tüm bölümleri bitirdin.":"";
-document.getElementById("kutlama").classList.add("gor","sadece-devam");durakla=true;duraklaBtnGoster(false);
-const anons=son?"Aferin Bulut! Tüm bölümleri bitirdin. Harikasın!":"Aferin Bulut! Şimdi devam etmek için sözcükleri tekrar edelim.";
-const devamGoster=()=>{btn.textContent="Devam";btn.style.display="";};
-seslendir(anons,devamGoster);
-setTimeout(devamGoster,6000);}
+// Bolum bitti: ayri panel/Devam dugmesi YOK. Dogrudan 3 sozcuk testi (dalga oncesiyle ayni proses),
+// ardindan otomatik sonraki bolume gec. Sadece son bolumde kutlama ekrani gosterilir.
+function bolumBitti(){
+const son=bolumIdx>=BOLUMLER.length-1;
+durakla=true;duraklaBtnGoster(false);
+if(son){
+document.getElementById("devamBtn").style.display="none";
+document.getElementById("kutlamaEmoji").textContent="Tebrikler";
+document.getElementById("kutlamaBaslik").textContent="Aferin Bulut! Tum bolumleri bitirdin.";
+document.getElementById("kutlama").classList.add("gor");
+seslendir("Aferin Bulut! Tum bolumleri bitirdin. Harikasin!",null);
+return;
+}
+mesajGoster("Bolum "+(bolumIdx+1)+" bitti! 3 sozcuk tekrar edelim.");
+setTimeout(bolumSonuSinav,900);
+}
 function bolumBasarisiz(){if(!oyunAktif&&durakla)return;
 oyunAktif=false;durakla=true;duraklaBtnGoster(false);
+document.getElementById("panel").classList.remove("acik");
 robotlar.forEach(r=>scene.remove(r.grup));robotlar=[];
 mermiler.forEach(b=>scene.remove(b.mesh));mermiler=[];
 document.getElementById("kutlamaEmoji").textContent="Olmadi";
 document.getElementById("kutlamaBaslik").textContent="Robotlar bulutunu ele gecirdi! Ayni bolumu tekrar dene.";
+document.getElementById("devamBtn").style.display="";
 document.getElementById("devamBtn").textContent="Bolumu Tekrar Oyna";
 document.getElementById("devamBtn").onclick=bolumTekrar;
 document.getElementById("kutlama").classList.add("gor");}
@@ -488,6 +501,7 @@ durakla=false;oyunAktif=true;duraklaBtnGoster(true);
 bolumBaslat();mesajGoster("Bolum "+(bolumIdx+1)+" tekrar basliyor!");}
 function gercektenSonrakiBolum(){
 document.getElementById("panel").classList.remove("acik");
+document.getElementById("kutlama").classList.remove("gor","sadece-devam");
 bolumIdx=(bolumIdx+1)%BOLUMLER.length;
 if(bolumIdx===0){can=Math.min(CAN_MAX,can+2);}else if(can<CAN_MAX){can++;}
 sagligiCiz();
@@ -500,6 +514,7 @@ bolumBaslat();mesajGoster("Bolum "+(bolumIdx+1)+" basliyor!");}
 function oyunBitti(){oyunAktif=false;durakla=true;
 document.getElementById("kutlamaEmoji").textContent="Olmadi";
 document.getElementById("kutlamaBaslik").textContent="Bulutun ele gecti! Tekrar dene.";
+document.getElementById("devamBtn").style.display="";
 document.getElementById("devamBtn").textContent="Yeniden Basla";
 document.getElementById("kutlama").classList.add("gor");
 document.getElementById("devamBtn").onclick=()=>location.reload();}

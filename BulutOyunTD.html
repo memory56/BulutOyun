@@ -432,8 +432,14 @@ clearTimeout(sessizlikTimer);
 if(!sonucGeldi && aktifKelime){deneme++;
 if(deneme>=MAX_DENEME){telaffuzPesEt();return;}
 document.getElementById("durum").innerHTML="Seni duyamadim, tekrar dinliyorum!";setTimeout(tekrarDinle,600);}};}
-function mikrofonIzniAl(){if(!TanimaAPI||mikrofonReddedildi)return;if(!taniyici)taniyiciKur();
-try{izinDenemesi=true;taniyici.start();}catch(_){izinDenemesi=false;}}
+async function mikrofonIzniAl(){
+if(mikrofonReddedildi)return;
+if(!(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia)){return;}
+try{const akis=await navigator.mediaDevices.getUserMedia({audio:true});
+akis.getTracks().forEach(t=>t.stop());}
+catch(_){mikrofonReddedildi=true;}
+if(TanimaAPI&&!taniyici)taniyiciKur();
+}
 function dinlemeyeBasla(){if(!aktifKelime)return;
 if(!TanimaAPI||mikrofonReddedildi){document.getElementById("durum").innerHTML="Mikrofon yok, gecildi.";setTimeout(telaffuzPesEt,1000);return;}
 if(dinliyor)return;if(!taniyici)taniyiciKur();
@@ -525,7 +531,7 @@ async function oyunuBaslat(){
 document.getElementById("basla").style.display="none";
 await panelDbAc();await panelKelimeleriYukle();
 if("speechSynthesis"in window){sesleriCoz();const w=new SpeechSynthesisUtterance(" ");w.volume=0;speechSynthesis.speak(w);}
-mikrofonIzniAl();
+await mikrofonIzniAl();
 bolumIdx=0;skor=baslangicPara();document.getElementById("skor").textContent=skor;
 can=5;sagligiCiz();oyunAktif=true;durakla=false;elDurdurma=false;duraklaBtnGoster(true);
 sahneDeseniTemizle();deseniUygula(bolumIdx);sahneDeseniKur();

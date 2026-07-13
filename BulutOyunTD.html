@@ -66,6 +66,12 @@ flex-direction:column;align-items:center;justify-content:center;gap:14px;text-al
 #kutlama.sadece-devam{background:transparent;justify-content:flex-end;padding-bottom:120px;pointer-events:none;}
 #kutlama.sadece-devam button{pointer-events:auto;box-shadow:0 6px 20px rgba(0,0,0,.35);}
 #kutlama.sadece-devam h2{color:#fff;text-shadow:0 2px 6px rgba(0,0,0,.4);}
+#sesKutu{position:fixed;left:10px;bottom:10px;display:flex;gap:8px;z-index:8;}
+.sesBtn{background:rgba(0,0,0,.4);border:none;border-radius:12px;padding:9px 12px;font-size:1.1rem;
+font-weight:800;color:#fff;cursor:pointer;box-shadow:0 3px 8px rgba(0,0,0,.3);backdrop-filter:blur(3px);
+display:none;line-height:1;}
+.sesBtn.gor{display:block;}
+.sesBtn.kapali{opacity:.45;}
 </style>
 </head>
 <body>
@@ -83,6 +89,10 @@ flex-direction:column;align-items:center;justify-content:center;gap:14px;text-al
 </div>
 <button id="duraklaBtn" onclick="oyunDuraklat()">⏸ Duraklat</button>
 <div id="duraklaKapla">⏸ Oyun duraklatildi</div>
+<div id="sesKutu">
+<button id="muzikBtn" class="sesBtn" onclick="muzikAcKapa()" title="Muzik">🎵</button>
+<button id="efektBtn" class="sesBtn" onclick="efektAcKapa()" title="Ses efektleri">🔊</button>
+</div>
 <div id="panel">
 <div id="ipucu">Bu kelimeyi soyle:</div>
 <div id="kelime">-</div>
@@ -101,6 +111,7 @@ Robot yok ettikce para kazanir, daha cok kule dikersin! Kuleye tekrar dokununca 
 <p><b>Dikkat:</b> Robotlarin yarisindan fazlasi buluta ulasirsa bolum bastan baslar!</p>
 <p><b>Dalgalar:</b> Her bolumde 3 dalga gelir; her dalga farkli renkte ve daha kalabalik!</p>
 <p><b>Gelistirme:</b> Kule Kademe 2 icin Bolum 3, Kademe 3 icin Bolum 5, Kademe 4 icin Bolum 7 gerekir.</p>
+<p><b>Ses:</b> Sol altta muzik (🎵) ve ses efektlerini (🔊) ayri ayri acip kapatabilirsin.</p>
 <button onclick="oyunuBaslat()">Basla</button>
 </div>
 <div id="kutlama">
@@ -179,6 +190,63 @@ const CEZA_PARA=10; // 3 basarisiz denemede uygulanan para cezasi
 const DALGA_RENKLERI=[0x6c7a89,0xe74c3c,0x27ae60,0x8e44ad,0xf39c12];
 function baslangicPara(){return 50+bolumIdx*25;}
 let bolumToplamRobot=0,sizanRobot=0,sizanSinir=0;
+/* ==== SES MOTORU (WebAudio ile sentez) ==== */
+let sesCtx=null,anaKazanc=null,muzikKazanc=null,efektKazanc=null;
+let muzikAcik=true,efektAcik=true,muzikCalisiyor=false,muzikZamanlayici=null;
+function sesKur(){
+if(sesCtx)return;
+try{sesCtx=new (window.AudioContext||window.webkitAudioContext)();}catch(_){sesCtx=null;return;}
+anaKazanc=sesCtx.createGain();anaKazanc.gain.value=0.9;anaKazanc.connect(sesCtx.destination);
+muzikKazanc=sesCtx.createGain();muzikKazanc.gain.value=muzikAcik?0.18:0;muzikKazanc.connect(anaKazanc);
+efektKazanc=sesCtx.createGain();efektKazanc.gain.value=efektAcik?0.5:0;efektKazanc.connect(anaKazanc);
+}
+function sesDevam(){if(sesCtx&&sesCtx.state==="suspended")sesCtx.resume();}
+// Kule ates sesi: kisa yukselen "pew"
+function sesAtes(){if(!sesCtx||!efektAcik)return;const t=sesCtx.currentTime;
+const o=sesCtx.createOscillator(),g=sesCtx.createGain();
+o.type="square";o.frequency.setValueAtTime(680,t);o.frequency.exponentialRampToValueAtTime(220,t+0.12);
+g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(0.6,t+0.01);g.gain.exponentialRampToValueAtTime(0.0001,t+0.14);
+o.connect(g);g.connect(efektKazanc);o.start(t);o.stop(t+0.16);}
+// Robot patlama sesi: kisa gurultu patlamasi + dusuk boom
+function sesPatlama(){if(!sesCtx||!efektAcik)return;const t=sesCtx.currentTime;
+const uzn=0.34,tampon=sesCtx.createBuffer(1,Math.floor(sesCtx.sampleRate*uzn),sesCtx.sampleRate);
+const veri=tampon.getChannelData(0);
+for(let i=0;i<veri.length;i++){veri[i]=(Math.random()*2-1)*Math.pow(1-i/veri.length,2);}
+const kaynak=sesCtx.createBufferSource();kaynak.buffer=tampon;
+const filtre=sesCtx.createBiquadFilter();filtre.type="lowpass";filtre.frequency.setValueAtTime(1200,t);filtre.frequency.exponentialRampToValueAtTime(180,t+uzn);
+const g=sesCtx.createGain();g.gain.setValueAtTime(0.9,t);g.gain.exponentialRampToValueAtTime(0.0001,t+uzn);
+kaynak.connect(filtre);filtre.connect(g);g.connect(efektKazanc);kaynak.start(t);
+const bo=sesCtx.createOscillator(),bg=sesCtx.createGain();
+bo.type="sine";bo.frequency.setValueAtTime(140,t);bo.frequency.exponentialRampToValueAtTime(50,t+0.3);
+bg.gain.setValueAtTime(0.5,t);bg.gain.exponentialRampToValueAtTime(0.0001,t+0.3);
+bo.connect(bg);bg.connect(efektKazanc);bo.start(t);bo.stop(t+0.32);}
+// Arka plan muzigi: yumusak, dongusel basit melodi
+const MUZIK_NOTA=[262,330,392,330,294,349,440,349,262,392,523,392,247,294,392,294];
+let muzikIdx=0;
+function muzikNotaCal(){
+if(!sesCtx||!muzikCalisiyor)return;
+const t=sesCtx.currentTime,f=MUZIK_NOTA[muzikIdx%MUZIK_NOTA.length];muzikIdx++;
+const o=sesCtx.createOscillator(),g=sesCtx.createGain();
+o.type="triangle";o.frequency.value=f;
+g.gain.setValueAtTime(0.0001,t);g.gain.linearRampToValueAtTime(0.5,t+0.05);g.gain.exponentialRampToValueAtTime(0.0001,t+0.45);
+o.connect(g);g.connect(muzikKazanc);o.start(t);o.stop(t+0.5);
+// bas notasi
+const bo=sesCtx.createOscillator(),bg=sesCtx.createGain();
+bo.type="sine";bo.frequency.value=f/2;
+bg.gain.setValueAtTime(0.0001,t);bg.gain.linearRampToValueAtTime(0.35,t+0.05);bg.gain.exponentialRampToValueAtTime(0.0001,t+0.5);
+bo.connect(bg);bg.connect(muzikKazanc);bo.start(t);bo.stop(t+0.55);
+}
+function muzikBaslat(){if(!sesCtx)return;muzikCalisiyor=true;
+clearInterval(muzikZamanlayici);muzikZamanlayici=setInterval(muzikNotaCal,480);}
+function muzikDurdur(){muzikCalisiyor=false;clearInterval(muzikZamanlayici);}
+function muzikAcKapa(){muzikAcik=!muzikAcik;
+if(muzikKazanc)muzikKazanc.gain.value=muzikAcik?0.18:0;
+const b=document.getElementById("muzikBtn");if(b)b.classList.toggle("kapali",!muzikAcik);}
+function efektAcKapa(){efektAcik=!efektAcik;
+if(efektKazanc)efektKazanc.gain.value=efektAcik?0.5:0;
+const b=document.getElementById("efektBtn");if(b)b.classList.toggle("kapali",!efektAcik);}
+function sesBtnGoster(g){["muzikBtn","efektBtn"].forEach(id=>{const b=document.getElementById(id);if(b)b.classList.toggle("gor",!!g);});}
+/* ==== /SES MOTORU ==== */
 function pikselDoku(cizer){const c=document.createElement("canvas");c.width=c.height=16;
 const x=c.getContext("2d");cizer(x);const t=new THREE.CanvasTexture(c);
 t.magFilter=THREE.NearestFilter;t.minFilter=THREE.NearestFilter;return t;}
@@ -310,7 +378,7 @@ if(d<kd.menzil&&d<min){min=d;hedef=r;}}
 if(hedef){const dx=hedef.grup.position.x-k.grup.position.x,dz=hedef.grup.position.z-k.grup.position.z;
 k.grup.rotation.y=Math.atan2(dx,dz);
 if(k.atesSayaci<=0){k.atesSayaci=kd.aralik;atesEt(k,hedef,kd.hasar);}}}}
-function atesEt(kule,hedef,hasar){const m=new THREE.Mesh(new THREE.SphereGeometry(0.14,6,6),new THREE.MeshBasicMaterial({color:0xffd166}));
+function atesEt(kule,hedef,hasar){sesAtes();const m=new THREE.Mesh(new THREE.SphereGeometry(0.14,6,6),new THREE.MeshBasicMaterial({color:0xffd166}));
 m.position.copy(kule.grup.position);m.position.y=1;scene.add(m);mermiler.push({mesh:m,hedef,hasar,t:0});}
 function mermileriGuncelle(dt){for(let i=mermiler.length-1;i>=0;i--){const b=mermiler[i];b.t+=dt;
 if(b.hedef.dying){scene.remove(b.mesh);mermiler.splice(i,1);continue;}
@@ -323,7 +391,7 @@ if(r.hp<=0){r.dying=true;skor+=8;document.getElementById("skor").textContent=sko
 function olenleriGuncelle(dt){for(let i=olenler.length-1;i>=0;i--){const o=olenler[i];o.t+=dt;
 o.grup.scale.setScalar(Math.max(0,1-o.t*2));o.grup.position.y+=dt*1.5;o.grup.rotation.y+=dt*8;
 if(o.t>0.5){scene.remove(o.grup);olenler.splice(i,1);}}}
-function patlamaEfekti(pos){const mat=new THREE.MeshBasicMaterial({color:0xffd166});
+function patlamaEfekti(pos){sesPatlama();const mat=new THREE.MeshBasicMaterial({color:0xffd166});
 for(let i=0;i<10;i++){const p=new THREE.Mesh(new THREE.BoxGeometry(0.12,0.12,0.12),mat);
 p.position.copy(pos);p.position.y+=1;p.userData.v=new THREE.Vector3((Math.random()-0.5)*4,Math.random()*4,(Math.random()-0.5)*4);p.userData.t=0;scene.add(p);parcaciklar.push(p);}}
 function parcaciklariGuncelle(dt){for(let i=parcaciklar.length-1;i>=0;i--){const p=parcaciklar[i];p.userData.t+=dt;
@@ -344,8 +412,8 @@ if(document.getElementById("panel").classList.contains("acik"))return;
 elDurdurma=!elDurdurma;
 const btn=document.getElementById("duraklaBtn");
 const kapla=document.getElementById("duraklaKapla");
-if(elDurdurma){btn.textContent="▶ Devam";kapla.classList.add("gor");}
-else{btn.textContent="⏸ Duraklat";kapla.classList.remove("gor");if(clock)clock.getDelta();}
+if(elDurdurma){btn.textContent="▶ Devam";kapla.classList.add("gor");muzikDurdur();}
+else{btn.textContent="⏸ Duraklat";kapla.classList.remove("gor");if(clock)clock.getDelta();if(muzikAcik)muzikBaslat();}
 }
 function duraklaBtnGoster(g){const b=document.getElementById("duraklaBtn");if(b)b.classList.toggle("gor",!!g);}
 let sinavKelimeler=[],sinavIdx=0;
@@ -419,10 +487,10 @@ function kelimeyiSesliOku(){if(aktifKelime)seslendir(aktifKelime,dinlemeyeBasla)
 function tekrarDinle(){if(!aktifKelime)return;document.getElementById("duydum").textContent="";seslendir(aktifKelime,dinlemeyeBasla);}
 const TanimaAPI=window.SpeechRecognition||window.webkitSpeechRecognition;
 let taniyici=null,dinliyor=false,sonucGeldi=false,izinDenemesi=false,mikrofonReddedildi=false,sessizlikTimer=null;
-function taniyiciKur(){taniyici=new TanimaAPI();taniyici.lang="tr-TR";taniyici.interimResults=false;taniyici.maxAlternatives=5;
-taniyici.onresult=e=>{sonucGeldi=true;const sec=[];for(const a of e.results[0])sec.push(a.transcript);
-document.getElementById("duydum").textContent="duydugum: "+sec[0];
-if(aktifKelime && sec.some(s=>eslesiyorMu(s,aktifKelime)))telaffuzBasarili();
+function taniyiciKur(){taniyici=new TanimaAPI();taniyici.lang="tr-TR";taniyici.interimResults=false;taniyici.maxAlternatives=1;
+taniyici.onresult=e=>{sonucGeldi=true;const enOlasi=e.results[0][0]?e.results[0][0].transcript:"";
+document.getElementById("duydum").textContent="duydugum: "+enOlasi;
+if(aktifKelime && eslesiyorMu(enOlasi,aktifKelime))telaffuzBasarili();
 else if(aktifKelime)telaffuzBasarisiz();};
 taniyici.onerror=ev=>{if(izinDenemesi){izinDenemesi=false;try{taniyici.stop();}catch(_){}
 if(ev.error==="not-allowed"||ev.error==="service-not-allowed")mikrofonReddedildi=true;return;}
@@ -455,7 +523,8 @@ return d[m][n];}
 // TAM TELAFFUZ: sadece kucuk/buyuk harf ve noktalama normalize edilir; harf farki KABUL EDILMEZ.
 // Konusma tanima alternatiflerinden herhangi biri hedefle birebir esitse dogru sayilir.
 function eslesiyorMu(soylenen,hedef){const s=sadelestir(soylenen),h=sadelestir(hedef);if(!s)return false;
-return s===h;}
+if(s===h)return true;
+return asciiKat(s)===asciiKat(h);}
 
 function sagligiCiz(){document.getElementById("saglik").textContent="HP: "+Math.max(0,can)+"/"+CAN_MAX;}
 function kuleBannerGoster(su,gelisti){const b=document.getElementById("kuleBanner");if(!b)return;
@@ -534,6 +603,7 @@ if("speechSynthesis"in window){sesleriCoz();const w=new SpeechSynthesisUtterance
 await mikrofonIzniAl();
 bolumIdx=0;skor=baslangicPara();document.getElementById("skor").textContent=skor;
 can=5;sagligiCiz();oyunAktif=true;durakla=false;elDurdurma=false;duraklaBtnGoster(true);
+sesKur();sesDevam();sesBtnGoster(true);muzikBaslat();
 sahneDeseniTemizle();deseniUygula(bolumIdx);sahneDeseniKur();
 bolumBaslat();
 mesajGoster("Bolum 1 basliyor!");}

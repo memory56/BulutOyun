@@ -446,9 +446,11 @@ document.getElementById("ilerleme").innerHTML=(toplam>1&&sinavKelimeler&&sinavKe
 document.getElementById("durum").textContent="";
 document.getElementById("duydum").textContent="";
 document.getElementById("panel").classList.add("acik");
+muzikDurdur();
 setTimeout(kelimeyiSesliOku,300);}
 function telaffuzPanelKapat(){sesDur();try{if(taniyici)taniyici.stop();}catch(_){}
-document.getElementById("panel").classList.remove("acik");}
+document.getElementById("panel").classList.remove("acik");
+if(muzikAcik&&!elDurdurma&&oyunAktif)muzikBaslat();}
 function telaffuzBasarili(){document.getElementById("durum").innerHTML="Harika!";
 const cb=basariCb;aktifKelime=null;basariCb=null;
 setTimeout(()=>{telaffuzPanelKapat();if(cb)cb();},700);}
@@ -523,8 +525,7 @@ return d[m][n];}
 // TAM TELAFFUZ: sadece kucuk/buyuk harf ve noktalama normalize edilir; harf farki KABUL EDILMEZ.
 // Konusma tanima alternatiflerinden herhangi biri hedefle birebir esitse dogru sayilir.
 function eslesiyorMu(soylenen,hedef){const s=sadelestir(soylenen),h=sadelestir(hedef);if(!s)return false;
-if(s===h)return true;
-return asciiKat(s)===asciiKat(h);}
+return s===h;}
 
 function sagligiCiz(){document.getElementById("saglik").textContent="HP: "+Math.max(0,can)+"/"+CAN_MAX;}
 function kuleBannerGoster(su,gelisti){const b=document.getElementById("kuleBanner");if(!b)return;

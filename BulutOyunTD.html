@@ -8,7 +8,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Bulut'un Kule Savunmasi">
+<meta name="apple-mobile-web-app-title" content="Bhulut'un Kule Savunmasi">
 <meta name="application-name" content="Bulut'un Kule Savunmasi">
 <link rel="manifest" href="manifest.json">
 <style>
@@ -568,7 +568,7 @@ async function azureIleDinle(){
     if(nb){tanidi=nb.Display||nb.Lexical||"";puan=(nb.PronunciationAssessment&&nb.PronunciationAssessment.AccuracyScore)||0;}
   }catch(_){}
   var dd=document.getElementById("duydum");if(dd)dd.textContent="duydugum: "+tanidi+" ("+Math.round(puan)+")";
-  if(aktifKelime && puan>=AZURE_ESIK){telaffuzBasarili();}
+  if(aktifKelime && puan>=AZURE_ESIK && eslesiyorMu(tanidi,aktifKelime)){telaffuzBasarili();}
   else{telaffuzBasarisiz();}
  }catch(hata){
   // Azure basarisiz -> tarayici tanimaya geri don

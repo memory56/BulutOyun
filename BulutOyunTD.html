@@ -550,7 +550,7 @@ async function azureIleDinle(){
  var kelime=aktifKelime;if(!kelime)return;
  var d=document.getElementById("durum");if(d)d.innerHTML="Dinliyorum...";
  try{
-  var wav=await azureKaydet(3);
+  var wav=await azureKaydet(3);var urlSerbest="https://"+azureBolge()+".stt.speech.microsoft.com/speech/recognition/conversation/cognitiveservices/v1?language=tr-TR&format=detailed";var ySerbest=await fetch(urlSerbest,{method:"POST",headers:{"Ocp-Apim-Subscription-Key":azureAnahtar(),"Content-Type":"audio/wav; codecs=audio/pcm; samplerate=16000","Accept":"application/json"},body:wav});if(!ySerbest.ok){throw new Error("Azure "+ySerbest.status);}var jsSerbest=await ySerbest.json();var duyulan="";try{var nbS=jsSerbest.NBest&&jsSerbest.NBest[0];duyulan=(nbS&&(nbS.Lexical||nbS.Display))||jsSerbest.DisplayText||"";}catch(_){}
   var cfg={referenceText:kelime,gradingSystem:"HundredMark",granularity:"Word",dimension:"Comprehensive"};
   var b64=btoa(JSON.stringify(cfg));
   var url="https://"+azureBolge()+".stt.speech.microsoft.com/speech/recognition/conversation/cognitiveservices/v1?language=tr-TR";
@@ -567,8 +567,8 @@ async function azureIleDinle(){
     var nb=js.NBest&&js.NBest[0];
     if(nb){tanidi=nb.Display||nb.Lexical||"";puan=(nb.PronunciationAssessment&&nb.PronunciationAssessment.AccuracyScore)||0;}
   }catch(_){}
-  var dd=document.getElementById("duydum");if(dd)dd.textContent="duydugum: "+tanidi+" ("+Math.round(puan)+")";
-  if(aktifKelime && puan>=AZURE_ESIK && eslesiyorMu(tanidi,aktifKelime)){telaffuzBasarili();}
+  var dd=document.getElementById("duydum");if(dd)dd.textContent="duydugum: "+duyulan+" ("+Math.round(puan)+")";
+  if(aktifKelime && puan>=AZURE_ESIK && eslesiyorMu(duyulan,aktifKelime)){telaffuzBasarili();}
   else{telaffuzBasarisiz();}
  }catch(hata){
   // Azure basarisiz -> tarayici tanimaya geri don

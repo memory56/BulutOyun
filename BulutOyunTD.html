@@ -572,7 +572,7 @@ async function azureIleDinle(){
   else{telaffuzBasarisiz();}
  }catch(hata){
   // Azure basarisiz -> tarayici tanimaya geri don
-  azureHatasi=true;
+  var dh=document.getElementById("durum");if(dh)dh.innerHTML="Baglanti sorunu, tekrar dinliyorum!";telaffuzBasarisiz();return;
   dinlemeyeBaslaTarayici();
  }
 }

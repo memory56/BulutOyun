@@ -512,8 +512,8 @@ if(TanimaAPI&&!taniyici)taniyiciKur();
 }
 
 // ===== AZURE TELAFFUZ DEGERLENDIRME (esik %80) =====
-var AZURE_ESIK=80;              // genel dogruluk esigi (overall accuracy)
-var AZURE_KELIME_ESIK=70;       // her kelimenin kendi dogruluk esigi (per-word accuracy)
+var AZURE_ESIK=92;              // genel dogruluk esigi (overall accuracy)
+var AZURE_KELIME_ESIK=88;       // her kelimenin kendi dogruluk esigi (per-word accuracy)
 var AZURE_TAMLIK_ESIK=80;       // completeness (soylenen/hedef orani)
 function azureAnahtar(){try{return (localStorage.getItem("bulutAzureKey")||"").trim();}catch(_){return "";}}
 function azureBolge(){try{return (localStorage.getItem("bulutAzureRegion")||"westeurope").trim();}catch(_){return "westeurope";}}

@@ -517,10 +517,12 @@ seslendir(yonerge,()=>{if(!aktifKelime)return;
 seslendir(aktifKelime,()=>{if(!aktifKelime)return;kEl.textContent="🎤";if(dEl)dEl.textContent="Şimdi sen söyle";dinlemeyeBasla();});});}
 const TanimaAPI=window.SpeechRecognition||window.webkitSpeechRecognition;
 let taniyici=null,dinliyor=false,sonucGeldi=false,izinDenemesi=false,mikrofonReddedildi=false,sessizlikTimer=null;
-function taniyiciKur(){taniyici=new TanimaAPI();taniyici.lang="tr-TR";taniyici.interimResults=false;taniyici.maxAlternatives=1;
-taniyici.onresult=e=>{sonucGeldi=true;const enOlasi=e.results[0][0]?e.results[0][0].transcript:"";
+function taniyiciKur(){taniyici=new TanimaAPI();taniyici.lang="tr-TR";taniyici.interimResults=false;taniyici.maxAlternatives=5;
+taniyici.onresult=e=>{sonucGeldi=true;var alts=[];try{for(var i=0;i<e.results[0].length;i++)alts.push(e.results[0][i].transcript||"");}catch(_){}
+var enOlasi=alts[0]||"";
 document.getElementById("duydum").textContent="duydugum: "+enOlasi;
-if(aktifKelime && eslesiyorMu(enOlasi,aktifKelime))telaffuzBasarili();
+var uydu=aktifKelime&&alts.some(function(a){return yakinMi(a,aktifKelime);});
+if(uydu)telaffuzBasarili();
 else if(aktifKelime)telaffuzBasarisiz(true);};
 taniyici.onerror=ev=>{if(izinDenemesi){izinDenemesi=false;try{taniyici.stop();}catch(_){}
 if(ev.error==="not-allowed"||ev.error==="service-not-allowed")mikrofonReddedildi=true;return;}
@@ -540,9 +542,8 @@ if(TanimaAPI&&!taniyici)taniyiciKur();
 }
 
 // ===== AZURE TELAFFUZ DEGERLENDIRME (esik %80) =====
-var AZURE_ESIK=92;              // genel dogruluk esigi (overall accuracy)
-var AZURE_KELIME_ESIK=88;       // her kelimenin kendi dogruluk esigi (per-word accuracy)
-var AZURE_TAMLIK_ESIK=80;       // completeness (soylenen/hedef orani)
+// Telaffuz esigi yoneticiden ayarlanabilir (localStorage: bulutAzureEsik). Cocuk icin varsayilan daha musait.
+function azureEsikOku(){var g=70;try{var v=parseInt(localStorage.getItem("bulutAzureEsik")||"",10);if(!isNaN(v)&&v>=30&&v<=95)g=v;}catch(_){}return {genel:g,kelime:Math.max(40,g-15),tamlik:60};}
 function azureAnahtar(){try{return (localStorage.getItem("bulutAzureKey")||"").trim();}catch(_){return "";}}
 function azureBolge(){try{return (localStorage.getItem("bulutAzureRegion")||"westeurope").trim();}catch(_){return "westeurope";}}
 function azureAktif(){return !!azureAnahtar();}
@@ -613,6 +614,7 @@ try{
   }
 }catch(_){cozuldu=false;}
 _sonPuan=cozuldu?puan:null;
+var esik=azureEsikOku();
 var dd=document.getElementById("duydum");if(dd)dd.textContent="duydugum: "+duyulan+" ("+Math.round(puan)+")";
   if(!aktifKelime){ /* iptal edildi */ }
     else if(!cozuldu){
@@ -620,7 +622,7 @@ var dd=document.getElementById("duydum");if(dd)dd.textContent="duydugum: "+duyul
       var dbg=document.getElementById("durum");if(dbg)dbg.innerHTML="Tam anlayamadim, tekrar dinliyorum!";
       telaffuzBasarisiz();
     }
-    else if(eslesiyorMu(duyulan,aktifKelime) && puan>=AZURE_ESIK && enDusukKelime>=AZURE_KELIME_ESIK && tamlik>=AZURE_TAMLIK_ESIK && !kotuKelime){
+    else if(puan>=esik.genel && enDusukKelime>=esik.kelime && tamlik>=esik.tamlik){
       telaffuzBasarili();
     }
     else{ telaffuzBasarisiz(true); }
@@ -652,8 +654,12 @@ try{taniyici.start();}catch(_){dinliyor=false;}}
 function sadelestir(s){return s.toLocaleLowerCase("tr").replace(/[.,!?;:]/g,"").replace(/\s+/g," ").trim();}
 // TAM TELAFFUZ: sadece kucuk/buyuk harf ve noktalama normalize edilir; harf farki KABUL EDILMEZ.
 // Konusma tanima alternatiflerinden herhangi biri hedefle birebir esitse dogru sayilir.
-function eslesiyorMu(soylenen,hedef){const s=sadelestir(soylenen),h=sadelestir(hedef);if(!s)return false;
-return s===h;}
+// Tarayici yedegi icin toleransli eslesme: birebir, icerme ya da ~1/3 karakter farkina kadar kabul.
+function lev(a,b){var m=a.length,n=b.length,d=[];for(var i=0;i<=m;i++)d[i]=[i];for(var j=0;j<=n;j++)d[0][j]=j;for(i=1;i<=m;i++)for(j=1;j<=n;j++)d[i][j]=Math.min(d[i-1][j]+1,d[i][j-1]+1,d[i-1][j-1]+(a[i-1]===b[j-1]?0:1));return d[m][n];}
+function yakinMi(soylenen,hedef){var s=sadelestir(soylenen),h=sadelestir(hedef);if(!s||!h)return false;
+if(s===h)return true;
+if(s.indexOf(h)>=0||h.indexOf(s)>=0)return true;
+var uz=Math.max(s.length,h.length);return uz>0 && (lev(s,h)/uz)<=0.34;}
 
 function sagligiCiz(){document.getElementById("saglik").textContent="HP: "+Math.max(0,can)+"/"+CAN_MAX;}
 function kuleBannerGoster(su,gelisti){const b=document.getElementById("kuleBanner");if(!b)return;

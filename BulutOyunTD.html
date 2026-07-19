@@ -120,7 +120,7 @@ Robot yok ettikce para kazanir, daha cok kule dikersin! Kuleye tekrar dokununca 
 <button id="devamBtn" onclick="bolumSonuSinav()">Devam</button>
 </div>
 <audio id="oynatici" style="display:none"></audio>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="./three.min.js"></script>
 <script>const BOLUMLER=[
 {robot:5, can:3,hiz:1.3,kelimeler:["kedi","elma","masa","balık","yağmur","kuzu"]},
 {robot:7, can:5,hiz:1.5,kelimeler:["araba","çiçek","bardak","kalem","kelebek","portakal"]},
@@ -440,9 +440,9 @@ const MAX_DENEME=3;
 function telaffuzSor(kelime,sira,toplam,onBasari){
 aktifKelime=kelime;basariCb=onBasari;deneme=0;durakla=true;
 sinavKelimeler=(toplam>1)?sinavKelimeler:[];
-document.getElementById("kelime").textContent=kelime;
-document.getElementById("ipucu").textContent=kelime.indexOf(" ")>=0?"Bu sozcugu soyle:":"Bu kelimeyi soyle:";
-document.getElementById("ilerleme").innerHTML=(toplam>1&&sinavKelimeler&&sinavKelimeler.length)?sinavKelimeler.map((k,i)=>"<span class=\"dizi-k"+(i===sira-1?" aktif":(i<sira-1?" ok":""))+"\">"+k+"</span>").join(" "):"";
+document.getElementById("kelime").textContent="🎧";
+document.getElementById("ipucu").textContent="";
+document.getElementById("ilerleme").innerHTML=(toplam>1&&sinavKelimeler&&sinavKelimeler.length)?sinavKelimeler.map((k,i)=>"<span class=\"dizi-k"+(i===sira-1?" aktif":(i<sira-1?" ok":""))+"\">●</span>").join(" "):"";
 document.getElementById("durum").textContent="";
 document.getElementById("duydum").textContent="";
 document.getElementById("panel").classList.add("acik");
@@ -451,13 +451,16 @@ setTimeout(kelimeyiSesliOku,300);}
 function telaffuzPanelKapat(){sesDur();try{if(taniyici)taniyici.stop();}catch(_){}
 document.getElementById("panel").classList.remove("acik");
 if(muzikAcik&&!elDurdurma&&oyunAktif)muzikBaslat();}
-function telaffuzBasarili(){document.getElementById("durum").innerHTML="Harika!";
+function telaffuzBasarili(){document.getElementById("kelime").textContent="🎉";document.getElementById("durum").innerHTML="Harika!";
+seslendir("Aferin!",null);
 const cb=basariCb;aktifKelime=null;basariCb=null;
-setTimeout(()=>{telaffuzPanelKapat();if(cb)cb();},700);}
+setTimeout(()=>{telaffuzPanelKapat();if(cb)cb();},900);}
 // 3 deneme sonunda: ceza uygula, testi gec, oyun devam etsin
 function telaffuzPesEt(){
 skor=Math.max(0,skor-CEZA_PARA);
 document.getElementById("skor").textContent=skor;
+document.getElementById("kelime").textContent="🙂";
+seslendir("Önemli değil, sonra yine deneriz.",null);
 document.getElementById("durum").innerHTML="Sonra tekrar deneriz. (-"+CEZA_PARA+" para)";
 const cb=basariCb;aktifKelime=null;basariCb=null;
 setTimeout(()=>{telaffuzPanelKapat();if(cb)cb();},1100);
@@ -485,8 +488,16 @@ const u=new SpeechSynthesisUtterance(metin);u.lang="tr-TR";u.rate=0.7;u.pitch=1.
 if(secilenSes)u.voice=secilenSes;
 if(bitince)u.onend=()=>bitince();
 speechSynthesis.speak(u);}
-function kelimeyiSesliOku(){if(aktifKelime)seslendir(aktifKelime,dinlemeyeBasla);}
-function tekrarDinle(){if(!aktifKelime)return;document.getElementById("duydum").textContent="";seslendir(aktifKelime,dinlemeyeBasla);}
+function kelimeyiSesliOku(){if(aktifKelime)yonlendirVeSoyle(true);}
+function tekrarDinle(){if(!aktifKelime)return;document.getElementById("duydum").textContent="";yonlendirVeSoyle(false);}
+// Sozlu yonlendirme: once yonergeyi soyle, sonra kelimeyi (kayitli ses ya da TTS), sonra dogrudan dinle.
+// Yazili metne gerek yok; cocuk duyup tekrar eder.
+function yonlendirVeSoyle(ilk){if(!aktifKelime)return;
+const yonerge=ilk?"Şimdi söyleyeceğim kelimeyi benden sonra tekrar et.":"Tekrar dinle, benden sonra söyle.";
+const kEl=document.getElementById("kelime"),dEl=document.getElementById("durum");
+kEl.textContent="🎧";if(dEl)dEl.textContent="Dinle...";
+seslendir(yonerge,()=>{if(!aktifKelime)return;
+seslendir(aktifKelime,()=>{if(!aktifKelime)return;kEl.textContent="🎤";if(dEl)dEl.textContent="Şimdi sen söyle";dinlemeyeBasla();});});}
 const TanimaAPI=window.SpeechRecognition||window.webkitSpeechRecognition;
 let taniyici=null,dinliyor=false,sonucGeldi=false,izinDenemesi=false,mikrofonReddedildi=false,sessizlikTimer=null;
 function taniyiciKur(){taniyici=new TanimaAPI();taniyici.lang="tr-TR";taniyici.interimResults=false;taniyici.maxAlternatives=1;

@@ -267,7 +267,8 @@ id:k.id, metin:k.metin, bolum:k.bolum, olusturma:k.olusturma,
 ses: await blobToBase64(k.sesBlob)
 });
 }
-const veri={surum:1, tarih:new Date().toISOString(), kelimeler:disa};
+const veri={surum:2, tarih:new Date().toISOString(), kelimeler:disa,
+azure:{anahtar:localStorage.getItem(AZURE_KEY_LS)||"", bolge:localStorage.getItem(AZURE_REGION_LS)||""}};
 const blob=new Blob([JSON.stringify(veri)],{type:"application/json"});
 const a=document.createElement("a");
 a.href=URL.createObjectURL(blob);
@@ -285,6 +286,14 @@ if(!confirm(veri.kelimeler.length+" kelime yüklenecek. Aynı id'ler güncelleni
 for(const k of veri.kelimeler){
 const blob=await base64ToBlob(k.ses);
 await kelimeKaydet({id:k.id||idUret(), metin:k.metin, bolum:k.bolum||1, sesBlob:blob, olusturma:k.olusturma||Date.now()});
+}
+if(veri.azure && (veri.azure.anahtar||veri.azure.bolge)){
+if(veri.azure.anahtar)localStorage.setItem(AZURE_KEY_LS,veri.azure.anahtar);
+if(veri.azure.bolge)localStorage.setItem(AZURE_REGION_LS,veri.azure.bolge);
+const kEl=document.getElementById("azureKey"),rEl=document.getElementById("azureRegion");
+if(kEl&&veri.azure.anahtar)kEl.value=veri.azure.anahtar;
+if(rEl&&veri.azure.bolge)rEl.value=veri.azure.bolge;
+azureDurumGuncelle();
 }
 alert("Yedek yüklendi.");
 listeCiz();
@@ -355,7 +364,8 @@ azureDurumGuncelle();
 BAŞLAT
 ============================================================ */
 (async ()=>{ await dbAc(); listeCiz(); azureDurumGuncelle();
-const r=localStorage.getItem(AZURE_REGION_LS); if(r)document.getElementById("azureRegion").value=r; })();
+const r=localStorage.getItem(AZURE_REGION_LS); if(r)document.getElementById("azureRegion").value=r;
+const k=localStorage.getItem(AZURE_KEY_LS); if(k)document.getElementById("azureKey").value=k; })();
 </script>
 </body>
 </html>

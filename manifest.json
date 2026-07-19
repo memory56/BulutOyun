@@ -2,7 +2,7 @@
     "name": "Bulut'un Robot Macerasi",
     "short_name": "BulutOyun",
     "description": "Bulut icin konusma terapisi 3D robot oyunu",
-    "start_url": "/BulutOyun/BulutOyun3D_1.html",
+    "start_url": "/BulutOyun/BulutOyunTD.html",
     "scope": "/BulutOyun/",
     "display": "fullscreen",
     "orientation": "landscape",

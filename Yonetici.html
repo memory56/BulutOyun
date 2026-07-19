@@ -37,6 +37,16 @@ display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
 .azure .aktif{background:#d3f9d8;color:#2b8a3e;}
 .azure .pasif{background:#ffe3e3;color:#c92a2a;}
 .bilgi{font-size:.8rem;color:#5a6b7b;background:#fff8e1;border:1px solid #ffe08a;border-radius:8px;padding:8px 10px;margin-bottom:12px;}
+.rapor{background:#fff;border-radius:14px;padding:14px;box-shadow:0 2px 8px rgba(0,0,0,.08);margin-bottom:16px;border:2px solid #2ecc71;}
+.rapor h2{font-size:1.05rem;color:#2c3e50;}
+.rapor table{width:100%;border-collapse:collapse;font-size:.85rem;margin-top:6px;}
+.rapor th,.rapor td{text-align:left;padding:6px 8px;border-bottom:1px solid #eef2f6;white-space:nowrap;}
+.rapor th{color:#5a6b7b;font-weight:700;}
+.rapor td.kelime{white-space:normal;font-weight:700;}
+.rapor .zor{color:#c92a2a;font-weight:800;}
+.rapor .iyi{color:#2b8a3e;font-weight:800;}
+.rapor .bos{color:#8d99ae;font-style:italic;padding:8px 0;}
+.rapor .satirlar{overflow-x:auto;}
 </style>
 </head>
 <body>
@@ -63,6 +73,18 @@ display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
 <button class="b-mavi" onclick="document.getElementById('yukleInput').click()">⬆️ Yedek Yükle</button>
 <input type="file" id="yukleInput" accept="application/json" style="display:none" onchange="yedekYukle(this.files[0])">
 <button class="b-gri" onclick="varsayilanlariEkle()">📋 Örnek Kelimeleri Ekle</button>
+</div>
+
+<div class="rapor" id="raporKart">
+<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
+<h2>📊 İlerleme Raporu</h2>
+<div class="satir" style="flex:0 0 auto;gap:6px;">
+<button class="b-mavi mini" onclick="raporCiz()">↻ Yenile</button>
+<button class="b-kirmizi mini" onclick="istatSil()">🗑 Sıfırla</button>
+</div>
+</div>
+<p style="font-size:.8rem;color:#5a6b7b;margin:6px 0 4px;">Çocuğun oyundaki telaffuz denemeleri. En çok zorlanılan kelimeler üstte. Azure açıksa puanlar 0–100 arası gerçek telaffuz doğruluğudur.</p>
+<div class="satirlar"><div id="raporIcerik"></div></div>
 </div>
 
 <div class="ekle">
@@ -267,8 +289,9 @@ id:k.id, metin:k.metin, bolum:k.bolum, olusturma:k.olusturma,
 ses: await blobToBase64(k.sesBlob)
 });
 }
-const veri={surum:2, tarih:new Date().toISOString(), kelimeler:disa,
-azure:{anahtar:localStorage.getItem(AZURE_KEY_LS)||"", bolge:localStorage.getItem(AZURE_REGION_LS)||""}};
+const veri={surum:3, tarih:new Date().toISOString(), kelimeler:disa,
+azure:{anahtar:localStorage.getItem(AZURE_KEY_LS)||"", bolge:localStorage.getItem(AZURE_REGION_LS)||""},
+istatistik:raporIstatOku()};
 const blob=new Blob([JSON.stringify(veri)],{type:"application/json"});
 const a=document.createElement("a");
 a.href=URL.createObjectURL(blob);
@@ -295,6 +318,7 @@ if(kEl&&veri.azure.anahtar)kEl.value=veri.azure.anahtar;
 if(rEl&&veri.azure.bolge)rEl.value=veri.azure.bolge;
 azureDurumGuncelle();
 }
+if(veri.istatistik){try{localStorage.setItem(ISTAT_LS,JSON.stringify(veri.istatistik));}catch(_){}raporCiz();}
 alert("Yedek yüklendi.");
 listeCiz();
 }catch(e){ alert("Yükleme hatası: "+e.message); }
@@ -361,9 +385,35 @@ azureDurumGuncelle();
 }
 
 /* ============================================================
+İLERLEME RAPORU — oyunun localStorage istatistigi (bulutIstatistik)
+Oyun ve panel ayni origin oldugundan localStorage ortaktir.
+============================================================ */
+const ISTAT_LS="bulutIstatistik";
+function raporIstatOku(){try{return JSON.parse(localStorage.getItem(ISTAT_LS)||"{}");}catch(_){return {};}}
+function kacis(s){return String(s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c];});}
+async function raporCiz(){
+const o=raporIstatOku();const anahtarlar=Object.keys(o);
+const hedef=document.getElementById("raporIcerik");if(!hedef)return;
+if(!anahtarlar.length){hedef.innerHTML="<div class='bos'>Henüz oyun verisi yok. Çocuk oynadıkça buraya düşer.</div>";return;}
+let bolumMap={};try{const t=await tumKelimeler();t.forEach(k=>bolumMap[k.metin]=k.bolum);}catch(_){}
+const satirlar=anahtarlar.map(function(m){const k=o[m];const oran=k.deneme?Math.round(100*k.basari/k.deneme):0;return {m:m,k:k,oran:oran};});
+satirlar.sort(function(a,b){return a.oran-b.oran || b.k.deneme-a.k.deneme;});
+let html="<table><thead><tr><th>Kelime</th><th>Böl.</th><th>Den.</th><th>Başarı</th><th>Son</th><th>Seyir</th></tr></thead><tbody>";
+for(const s of satirlar){
+const trend=(s.k.puanlar&&s.k.puanlar.length)?s.k.puanlar.slice(-5).map(function(p){return p.p;}).join(" → "):"—";
+const oranSinif=s.oran>=70?"iyi":(s.oran<40?"zor":"");
+const sp=(s.k.sonPuan!=null)?s.k.sonPuan:"—";
+const pes=s.k.pes?(" · "+s.k.pes+" pes"):"";
+html+="<tr><td class='kelime'>"+kacis(s.m)+"</td><td>"+(bolumMap[s.m]||"—")+"</td><td>"+s.k.deneme+"</td><td class='"+oranSinif+"'>%"+s.oran+" ("+s.k.basari+"/"+s.k.deneme+")"+pes+"</td><td>"+sp+"</td><td style='color:#5a6b7b'>"+trend+"</td></tr>";
+}
+html+="</tbody></table>";hedef.innerHTML=html;
+}
+function istatSil(){if(!confirm("Tüm ilerleme raporu (oyun istatistikleri) silinsin mi? Kelimeler ve sesler silinmez."))return;localStorage.removeItem(ISTAT_LS);raporCiz();}
+
+/* ============================================================
 BAŞLAT
 ============================================================ */
-(async ()=>{ await dbAc(); listeCiz(); azureDurumGuncelle();
+(async ()=>{ await dbAc(); listeCiz(); azureDurumGuncelle(); raporCiz();
 const r=localStorage.getItem(AZURE_REGION_LS); if(r)document.getElementById("azureRegion").value=r;
 const k=localStorage.getItem(AZURE_KEY_LS); if(k)document.getElementById("azureKey").value=k; })();
 </script>

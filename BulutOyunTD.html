@@ -492,9 +492,26 @@ const tr=v.filter(x=>/^tr/i.test(x.lang));
 secilenSes=tr.find(x=>/google/i.test(x.name))||tr.find(x=>/turkish|turk/i.test(x.name))||tr[0]||null;}
 function sesDur(){if("speechSynthesis"in window)speechSynthesis.cancel();
 const o=document.getElementById("oynatici");if(o){o.pause();o.currentTime=0;}}
+// Kayitli seslerin sesini yukseltmek icin oynaticiyi Web Audio uzerinden guclendir (kazanc + limiter).
+// <audio>.volume 1.0'i gecemez; TTS ile ayni seviyeye gelmesi icin gain kullaniyoruz.
+var KAYIT_KAZANC=3.0;
+function oynaticiKazancKur(){
+ if(window.__oynatKuruldu)return window.__oynatKuruldu;
+ try{
+  var o=document.getElementById("oynatici");
+  var ctx=window.__oynatCtx||(window.__oynatCtx=new (window.AudioContext||window.webkitAudioContext)());
+  var src=ctx.createMediaElementSource(o),g=ctx.createGain(),lim=ctx.createDynamicsCompressor();
+  g.gain.value=KAYIT_KAZANC;
+  lim.threshold.value=-6;lim.knee.value=0;lim.ratio.value=20;lim.attack.value=0.003;lim.release.value=0.15;
+  src.connect(g);g.connect(lim);lim.connect(ctx.destination);
+  window.__oynatKuruldu={ctx:ctx,gain:g};
+ }catch(_){window.__oynatKuruldu={ctx:null,gain:null};}
+ return window.__oynatKuruldu;
+}
 function seslendir(metin,bitince){
 const kayit=kelimeKaydiBul(metin);
 if(kayit){const o=document.getElementById("oynatici");
+var kz=oynaticiKazancKur();try{if(kz.ctx&&kz.ctx.state==="suspended")kz.ctx.resume();}catch(_){}
 o.src=URL.createObjectURL(kayit.sesBlob);
 o.onended=()=>{if(bitince)bitince();};
 o.play().catch(()=>{if(bitince)bitince();});
@@ -567,12 +584,14 @@ function yenidenOrnekle(data,girisOrn,hedefOrn){
 async function azureKaydet(saniye){
  var akis=await navigator.mediaDevices.getUserMedia({audio:true});
  var mr=window.__mikAudioCtx||(window.__mikAudioCtx=new (window.AudioContext||window.webkitAudioContext)());
+ try{ if(mr.state==="suspended") await mr.resume(); }catch(_){ }
  var src=mr.createMediaStreamSource(akis),parcalar=[],islemci=mr.createScriptProcessor(4096,1,1);
  src.connect(islemci);islemci.connect(mr.destination);
  islemci.onaudioprocess=function(e){parcalar.push(new Float32Array(e.inputBuffer.getChannelData(0)));};
  await new Promise(function(r){setTimeout(r,saniye*1000);});
  islemci.disconnect();src.disconnect();akis.getTracks().forEach(function(tr){tr.stop();});
  var top=0;parcalar.forEach(function(p){top+=p.length;});
+ if(top===0) throw new Error("SES_YOK");
  var birlesik=new Float32Array(top),ofs=0;parcalar.forEach(function(p){birlesik.set(p,ofs);ofs+=p.length;});
  var yeni=yenidenOrnekle(birlesik,mr.sampleRate,16000);
  return wavKodla(yeni,16000);
@@ -630,14 +649,36 @@ var dd=document.getElementById("duydum");if(dd)dd.textContent="duydugum: "+duyul
   // Azure hatasi: kalici kimlik/yetki hatasinda (401/403) tarayici tanimaya kalici gec;
   // gecici hatalarda (503, timeout, ag) Azure'u kapatMA, sadece tekrar dinle.
   var mesaj=(hata&&hata.message)||"";
+  var ad=(hata&&hata.name)||"";
+  var dh=document.getElementById("durum"),ddx=document.getElementById("duydum");
+  // Mikrofon izni reddedilmis: net mesaj, kisir donguye girme
+  if(ad==="NotAllowedError"||ad==="SecurityError"||/permission|izin|denied/i.test(mesaj)){
+    mikrofonReddedildi=true;
+    if(dh)dh.innerHTML="🎤 Mikrofon izni yok — ayarlardan izin verin.";
+    if(ddx)ddx.textContent="mikrofon izni reddedilmis";
+    return;
+  }
+  // Mikrofon bulunamadi / baska uygulama kullaniyor
+  if(ad==="NotFoundError"||ad==="NotReadableError"||ad==="OverconstrainedError"){
+    if(dh)dh.innerHTML="🎤 Mikrofon bulunamadi ya da mesgul.";
+    if(ddx)ddx.textContent="mikrofon hatasi: "+ad;
+    return;
+  }
+  // Ses yakalanamadi (bos kayit): genelde ses baglami askida ya da izin/donanim
+  if(mesaj==="SES_YOK"){
+    if(dh)dh.innerHTML="Ses alinamadi, tekrar dinliyorum!";
+    if(ddx)ddx.textContent="ses alinamadi (mikrofon bos)";
+    telaffuzBasarisiz();
+    return;
+  }
   var kalici=/\b(401|403)\b/.test(mesaj);
   if(kalici){
     azureHatasi=true;
-    var dk=document.getElementById("durum");if(dk)dk.innerHTML="Azure kapali, tarayiciyla dinliyorum!";
+    if(dh)dh.innerHTML="Azure kapali, tarayiciyla dinliyorum!";
     dinlemeyeBaslaTarayici();
     return;
   }
-  var dh=document.getElementById("durum");if(dh)dh.innerHTML="Baglanti sorunu, tekrar dinliyorum!";
+  if(dh)dh.innerHTML="Baglanti sorunu ("+(mesaj||ad||"?")+"), tekrar dinliyorum!";
   telaffuzBasarisiz();
   return;
 }

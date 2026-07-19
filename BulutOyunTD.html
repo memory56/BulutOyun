@@ -121,8 +121,8 @@ Robot yok ettikce para kazanir, daha cok kule dikersin! Kuleye tekrar dokununca 
 <button id="devamBtn" onclick="bolumSonuSinav()">Devam</button>
 </div>
 <audio id="oynatici" style="display:none"></audio>
-<div id="tanikutu" style="position:fixed;left:6px;bottom:6px;z-index:99999;max-width:72vw;max-height:40vh;overflow:auto;background:rgba(0,0,0,.82);color:#7CFC00;font:11px/1.35 monospace;padding:6px 8px;border-radius:8px;white-space:pre-wrap;">SÜRÜM v6 — tani hazir</div>
-<div id="surumEtiket" style="position:fixed;right:6px;top:6px;z-index:99999;background:rgba(0,0,0,.7);color:#fff;font:bold 12px monospace;padding:3px 8px;border-radius:6px;">v6</div>
+<div id="tanikutu" style="position:fixed;left:6px;bottom:6px;z-index:99999;max-width:72vw;max-height:40vh;overflow:auto;background:rgba(0,0,0,.82);color:#7CFC00;font:11px/1.35 monospace;padding:6px 8px;border-radius:8px;white-space:pre-wrap;">SÜRÜM v7 — tani hazir</div>
+<div id="surumEtiket" style="position:fixed;right:6px;top:6px;z-index:99999;background:rgba(0,0,0,.7);color:#fff;font:bold 12px monospace;padding:3px 8px;border-radius:6px;">v7</div>
 <script src="./three.min.js"></script>
 <script>const BOLUMLER=[
 {robot:5, can:3,hiz:1.3,kelimeler:["kedi","elma","masa","balık","yağmur","kuzu"]},
@@ -617,8 +617,8 @@ async function azureIleDinle(){
  var d=document.getElementById("durum");if(d)d.innerHTML="Dinliyorum...";
  try{
   var wav=await azureKaydet(3);var urlSerbest="https://"+azureBolge()+".stt.speech.microsoft.com/speech/recognition/conversation/cognitiveservices/v1?language=tr-TR&format=detailed";var ySerbest=await fetch(urlSerbest,{method:"POST",headers:{"Ocp-Apim-Subscription-Key":azureAnahtar(),"Content-Type":"audio/wav; codecs=audio/pcm; samplerate=16000","Accept":"application/json"},body:wav});if(!ySerbest.ok){throw new Error("Azure "+ySerbest.status);}var jsSerbest=await ySerbest.json();var duyulan="";try{var nbS=jsSerbest.NBest&&jsSerbest.NBest[0];duyulan=(nbS&&(nbS.Lexical||nbS.Display))||jsSerbest.DisplayText||"";}catch(_){}
-  var cfg={referenceText:kelime,gradingSystem:"HundredMark",granularity:"Word",dimension:"Comprehensive",EnableMiscue:true};
-  var b64=btoa(JSON.stringify(cfg));
+  var cfg={referenceText:kelime,gradingSystem:"HundredMark",granularity:"Word",dimension:"Comprehensive",EnableMiscue:false};
+  var b64=btoa(unescape(encodeURIComponent(JSON.stringify(cfg))));
   var url="https://"+azureBolge()+".stt.speech.microsoft.com/speech/recognition/conversation/cognitiveservices/v1?language=tr-TR";
   var yanit=await fetch(url,{method:"POST",headers:{
     "Ocp-Apim-Subscription-Key":azureAnahtar(),
@@ -635,6 +635,7 @@ try{
   if(nb){
     tanidi=nb.Display||nb.Lexical||"";
     var pa=nb.PronunciationAssessment||{};
+    taniLog("pa: "+JSON.stringify(pa).slice(0,140));
     puan=pa.AccuracyScore||0;
     if(typeof pa.CompletenessScore==="number")tamlik=pa.CompletenessScore;
     var kelimeler=nb.Words||[];
@@ -649,9 +650,10 @@ try{
     }
   }
 }catch(_){cozuldu=false;}
-_sonPuan=cozuldu?puan:null;
+_sonPuan=(cozuldu&&puan>0)?puan:null;
 var esik=azureEsikOku();
-taniLog("duy:'"+duyulan+"' puan "+Math.round(puan)+" enDusuk "+Math.round(enDusukKelime)+" coz "+cozuldu);
+var metinTuttu=yakinMi(duyulan,aktifKelime);
+taniLog("duy:'"+duyulan+"' puan "+Math.round(puan)+" enDusuk "+Math.round(enDusukKelime)+" coz "+cozuldu+" metin:"+(metinTuttu?"tuttu":"tutmadi"));
 var dd=document.getElementById("duydum");if(dd)dd.textContent="duydugum: "+duyulan+" ("+Math.round(puan)+")";
   if(!aktifKelime){ /* iptal edildi */ }
     else if(!cozuldu){
@@ -660,11 +662,15 @@ var dd=document.getElementById("duydum");if(dd)dd.textContent="duydugum: "+duyul
       var dbg=document.getElementById("durum");if(dbg)dbg.innerHTML="Tam anlayamadim, tekrar dinliyorum!";
       telaffuzBasarisiz();
     }
-    else if(puan>=esik.genel && enDusukKelime>=esik.kelime && tamlik>=esik.tamlik){
-      taniLog("KARAR: GECTI");
+    else if(puan>0){
+      if(puan>=esik.genel && enDusukKelime>=esik.kelime && tamlik>=esik.tamlik){taniLog("KARAR: GECTI (puan "+Math.round(puan)+")");telaffuzBasarili();}
+      else{taniLog("KARAR: kaldi (puan "+Math.round(puan)+" < "+esik.genel+")");telaffuzBasarisiz(true);}
+    }
+    else if(metinTuttu){
+      taniLog("KARAR: GECTI (puan yok, kelime dogru)");
       telaffuzBasarili();
     }
-    else{ taniLog("KARAR: kaldi (esik "+esik.genel+"/"+esik.kelime+")"); telaffuzBasarisiz(true); }
+    else{ taniLog("KARAR: kaldi (puan yok, kelime tutmadi)"); telaffuzBasarisiz(true); }
  }catch(hata){
   // Azure hatasi: kalici kimlik/yetki hatasinda (401/403) tarayici tanimaya kalici gec;
   // gecici hatalarda (503, timeout, ag) Azure'u kapatMA, sadece tekrar dinle.

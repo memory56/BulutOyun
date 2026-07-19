@@ -583,17 +583,24 @@ function yenidenOrnekle(data,girisOrn,hedefOrn){
 }
 async function azureKaydet(saniye){
  var akis=await navigator.mediaDevices.getUserMedia({audio:true});
- var mr=window.__mikAudioCtx||(window.__mikAudioCtx=new (window.AudioContext||window.webkitAudioContext)());
- try{ if(mr.state==="suspended") await mr.resume(); }catch(_){ }
- var src=mr.createMediaStreamSource(akis),parcalar=[],islemci=mr.createScriptProcessor(4096,1,1);
- src.connect(islemci);islemci.connect(mr.destination);
- islemci.onaudioprocess=function(e){parcalar.push(new Float32Array(e.inputBuffer.getChannelData(0)));};
+ var mime="";var secenekler=["audio/webm;codecs=opus","audio/webm","audio/ogg;codecs=opus","audio/mp4"];
+ for(var i=0;i<secenekler.length;i++){try{if(window.MediaRecorder&&MediaRecorder.isTypeSupported(secenekler[i])){mime=secenekler[i];break;}}catch(_){}}
+ var kaydedici=mime?new MediaRecorder(akis,{mimeType:mime}):new MediaRecorder(akis);
+ var parcalar=[];kaydedici.ondataavailable=function(e){if(e.data&&e.data.size)parcalar.push(e.data);};
+ var durdu=new Promise(function(res){kaydedici.onstop=res;});
+ kaydedici.start();
  await new Promise(function(r){setTimeout(r,saniye*1000);});
- islemci.disconnect();src.disconnect();akis.getTracks().forEach(function(tr){tr.stop();});
- var top=0;parcalar.forEach(function(p){top+=p.length;});
- if(top===0) throw new Error("SES_YOK");
- var birlesik=new Float32Array(top),ofs=0;parcalar.forEach(function(p){birlesik.set(p,ofs);ofs+=p.length;});
- var yeni=yenidenOrnekle(birlesik,mr.sampleRate,16000);
+ try{kaydedici.stop();}catch(_){}
+ await durdu;
+ akis.getTracks().forEach(function(tr){tr.stop();});
+ if(!parcalar.length)throw new Error("SES_YOK");
+ var blob=new Blob(parcalar,{type:mime||"audio/webm"});
+ var arr=await blob.arrayBuffer();
+ var ctx=window.__decCtx||(window.__decCtx=new (window.AudioContext||window.webkitAudioContext)());
+ try{if(ctx.state==="suspended")await ctx.resume();}catch(_){}
+ var ab=await new Promise(function(res,rej){try{var p=ctx.decodeAudioData(arr,res,rej);if(p&&p.then)p.then(res,rej);}catch(e){rej(e);}});
+ if(!ab||!ab.length)throw new Error("SES_YOK");
+ var yeni=yenidenOrnekle(ab.getChannelData(0),ab.sampleRate,16000);
  return wavKodla(yeni,16000);
 }
 async function azureIleDinle(){

@@ -70,9 +70,9 @@ display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
 <label style="font-weight:700;color:#2c3e50;display:block;margin-bottom:6px;">Telaffuz hassasiyeti</label>
 <p class="not" style="margin-bottom:8px;">Doğru telaffuzlar sık sık "yanlış" sayılıyorsa <b>Kolay</b>'ı seçin; çocuk ilerledikçe artırın. (Yalnızca Azure açıkken etkilidir.)</p>
 <div class="satir">
-<button class="b-gri mini" onclick="hassasiyetSec(55)">😊 Kolay</button>
-<button class="b-gri mini" onclick="hassasiyetSec(70)">🙂 Orta</button>
-<button class="b-gri mini" onclick="hassasiyetSec(85)">🧐 Zor</button>
+<button class="b-gri mini" onclick="hassasiyetSec(65)">😊 Kolay</button>
+<button class="b-gri mini" onclick="hassasiyetSec(80)">🙂 Orta</button>
+<button class="b-gri mini" onclick="hassasiyetSec(92)">🧐 Zor</button>
 </div>
 <span id="hassasiyetDurum" class="durumEt" style="margin-top:8px;display:inline-block;"></span>
 </div>
@@ -400,7 +400,7 @@ TELAFFUZ HASSASIYETI (localStorage: bulutAzureEsik) — oyun bu esigi okur
 ============================================================ */
 const AZURE_ESIK_LS="bulutAzureEsik";
 function hassasiyetSec(v){try{localStorage.setItem(AZURE_ESIK_LS,String(v));}catch(_){}hassasiyetDurumGuncelle();}
-function hassasiyetDurumGuncelle(){var el=document.getElementById("hassasiyetDurum");if(!el)return;var v=parseInt(localStorage.getItem(AZURE_ESIK_LS)||"70",10);if(isNaN(v))v=70;var ad=v<=60?"Kolay":(v>=80?"Zor":"Orta");el.textContent="Seçili: "+ad+" (eşik "+v+")";el.className="durumEt aktif";}
+function hassasiyetDurumGuncelle(){var el=document.getElementById("hassasiyetDurum");if(!el)return;var v=parseInt(localStorage.getItem(AZURE_ESIK_LS)||"80",10);if(isNaN(v))v=80;var ad=v<=69?"Kolay":(v>=90?"Zor":"Orta");el.textContent="Seçili: "+ad+" (eşik "+v+")";el.className="durumEt aktif";}
 
 /* ============================================================
 İLERLEME RAPORU — oyunun localStorage istatistigi (bulutIstatistik)

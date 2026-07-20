@@ -121,8 +121,8 @@ Robot yok ettikce para kazanir, daha cok kule dikersin! Kuleye tekrar dokununca 
 <button id="devamBtn" onclick="bolumSonuSinav()">Devam</button>
 </div>
 <audio id="oynatici" style="display:none"></audio>
-<div id="tanikutu" style="position:fixed;left:6px;bottom:6px;z-index:99999;max-width:72vw;max-height:40vh;overflow:auto;background:rgba(0,0,0,.82);color:#7CFC00;font:11px/1.35 monospace;padding:6px 8px;border-radius:8px;white-space:pre-wrap;">SÜRÜM v7 — tani hazir</div>
-<div id="surumEtiket" style="position:fixed;right:6px;top:6px;z-index:99999;background:rgba(0,0,0,.7);color:#fff;font:bold 12px monospace;padding:3px 8px;border-radius:6px;">v7</div>
+<div id="tanikutu" style="position:fixed;left:6px;bottom:6px;z-index:99999;max-width:72vw;max-height:40vh;overflow:auto;background:rgba(0,0,0,.82);color:#7CFC00;font:11px/1.35 monospace;padding:6px 8px;border-radius:8px;white-space:pre-wrap;">SÜRÜM v8 — tani hazir</div>
+<div id="surumEtiket" style="position:fixed;right:6px;top:6px;z-index:99999;background:rgba(0,0,0,.7);color:#fff;font:bold 12px monospace;padding:3px 8px;border-radius:6px;">v8</div>
 <script src="./three.min.js"></script>
 <script>const BOLUMLER=[
 {robot:5, can:3,hiz:1.3,kelimeler:["kedi","elma","masa","balık","yağmur","kuzu"]},
@@ -564,7 +564,7 @@ if(TanimaAPI&&!taniyici)taniyiciKur();
 
 // ===== AZURE TELAFFUZ DEGERLENDIRME (esik %80) =====
 // Telaffuz esigi yoneticiden ayarlanabilir (localStorage: bulutAzureEsik). Cocuk icin varsayilan daha musait.
-function azureEsikOku(){var g=70;try{var v=parseInt(localStorage.getItem("bulutAzureEsik")||"",10);if(!isNaN(v)&&v>=30&&v<=95)g=v;}catch(_){}return {genel:g,kelime:Math.max(40,g-15),tamlik:60};}
+function azureEsikOku(){var g=80;try{var v=parseInt(localStorage.getItem("bulutAzureEsik")||"",10);if(!isNaN(v)&&v>=30&&v<=95)g=v;}catch(_){}return {genel:g,kelime:Math.max(50,g-10),tamlik:70};}
 function azureAnahtar(){try{return (localStorage.getItem("bulutAzureKey")||"").trim();}catch(_){return "";}}
 function azureBolge(){try{return (localStorage.getItem("bulutAzureRegion")||"westeurope").trim();}catch(_){return "westeurope";}}
 function azureAktif(){return !!azureAnahtar();}
@@ -617,7 +617,7 @@ async function azureIleDinle(){
  var d=document.getElementById("durum");if(d)d.innerHTML="Dinliyorum...";
  try{
   var wav=await azureKaydet(3);var urlSerbest="https://"+azureBolge()+".stt.speech.microsoft.com/speech/recognition/conversation/cognitiveservices/v1?language=tr-TR&format=detailed";var ySerbest=await fetch(urlSerbest,{method:"POST",headers:{"Ocp-Apim-Subscription-Key":azureAnahtar(),"Content-Type":"audio/wav; codecs=audio/pcm; samplerate=16000","Accept":"application/json"},body:wav});if(!ySerbest.ok){throw new Error("Azure "+ySerbest.status);}var jsSerbest=await ySerbest.json();var duyulan="";try{var nbS=jsSerbest.NBest&&jsSerbest.NBest[0];duyulan=(nbS&&(nbS.Lexical||nbS.Display))||jsSerbest.DisplayText||"";}catch(_){}
-  var cfg={referenceText:kelime,gradingSystem:"HundredMark",granularity:"Word",dimension:"Comprehensive",EnableMiscue:false};
+  var cfg={ReferenceText:kelime,GradingSystem:"HundredMark",Granularity:"Word",Dimension:"Comprehensive",EnableMiscue:false};
   var b64=btoa(unescape(encodeURIComponent(JSON.stringify(cfg))));
   var url="https://"+azureBolge()+".stt.speech.microsoft.com/speech/recognition/conversation/cognitiveservices/v1?language=tr-TR";
   var yanit=await fetch(url,{method:"POST",headers:{

@@ -72,7 +72,6 @@ display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
 <button class="b-yesil" onclick="yedekIndir()">⬇️ JSON Yedek İndir</button>
 <button class="b-mavi" onclick="document.getElementById('yukleInput').click()">⬆️ Yedek Yükle</button>
 <input type="file" id="yukleInput" accept="application/json" style="display:none" onchange="yedekYukle(this.files[0])">
-<button class="b-gri" onclick="varsayilanlariEkle()">📋 Örnek Kelimeleri Ekle</button>
 </div>
 
 <div class="rapor" id="raporKart">
@@ -185,7 +184,7 @@ listeCiz();
 async function listeCiz(){
 const kelimeler=await tumKelimeler();
 const liste=document.getElementById("liste");
-if(!kelimeler.length){ liste.innerHTML='<p class="aciklama">Henüz kelime yok. Yukarıdan ekleyin ya da "Örnek Kelimeleri Ekle" deyin.</p>'; return; }
+if(!kelimeler.length){ liste.innerHTML='<p class="aciklama">Henüz kelime yok. Yukarıdan yeni kelime ekleyin.</p>'; return; }
 liste.innerHTML="";
 for(const k of kelimeler){
 const kart=document.createElement("div"); kart.className="kart";
@@ -325,33 +324,7 @@ listeCiz();
 document.getElementById("yukleInput").value="";
 }
 
-/* ============================================================
-ÖRNEK KELİMELER (oyundaki 8 BÖLÜM ile uyumlu)
-============================================================ */
-async function varsayilanlariEkle(){
-const varsayilan=[
-{b:1,liste:["kedi","elma","masa","balık","yağmur","kuzu"]},
-{b:2,liste:["araba","çiçek","bardak","kalem","kelebek","portakal"]},
-{b:3,liste:["kırmızı elma","güzel kelebek","büyük araba","yeşil ağaç"]},
-{b:4,liste:["günaydın","teşekkür ederim","nasılsın","afiyet olsun"]},
-{b:5,liste:["okul","defter","pencere","kitap","köprü","deniz"]},
-{b:6,liste:["sarı otobüs","tatlı çikolata","hızlı tren","küçük köpek"]},
-{b:7,liste:["iyi geceler","görüşürüz","hoşça kal","kolay gelsin"]},
-{b:8,liste:["bugün hava çok güzel","annemi çok seviyorum","yarın okula gideceğim"]},
-];
-const mevcut=await tumKelimeler();
-const mevcutMetin=new Set(mevcut.map(k=>k.bolum+"|"+k.metin));
-let sayi=0;
-for(const grup of varsayilan){
-for(const m of grup.liste){
-if(mevcutMetin.has(grup.b+"|"+m)) continue;
-await kelimeKaydet({id:idUret(),metin:m,bolum:grup.b,sesBlob:null,olusturma:Date.now()+sayi});
-sayi++;
-}
-}
-alert(sayi+" örnek kelime eklendi.");
-listeCiz();
-}
+
 
 /* ============================================================
 AZURE TELAFFUZ AYARI (localStorage)

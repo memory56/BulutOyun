@@ -121,8 +121,8 @@ Robot yok ettikce para kazanir, daha cok kule dikersin! Kuleye tekrar dokununca 
 <button id="devamBtn" onclick="bolumSonuSinav()">Devam</button>
 </div>
 <audio id="oynatici" style="display:none"></audio>
-<div id="tanikutu" style="position:fixed;left:6px;bottom:6px;z-index:99999;max-width:72vw;max-height:40vh;overflow:auto;background:rgba(0,0,0,.82);color:#7CFC00;font:11px/1.35 monospace;padding:6px 8px;border-radius:8px;white-space:pre-wrap;">SÜRÜM v9 — tani hazir</div>
-<div id="surumEtiket" style="position:fixed;right:6px;top:6px;z-index:99999;background:rgba(0,0,0,.7);color:#fff;font:bold 12px monospace;padding:3px 8px;border-radius:6px;">v9</div>
+<div id="tanikutu" style="position:fixed;left:6px;bottom:6px;z-index:99999;max-width:72vw;max-height:40vh;overflow:auto;background:rgba(0,0,0,.82);color:#7CFC00;font:11px/1.35 monospace;padding:6px 8px;border-radius:8px;white-space:pre-wrap;">SÜRÜM v10 — tani hazir</div>
+<div id="surumEtiket" style="position:fixed;right:6px;top:6px;z-index:99999;background:rgba(0,0,0,.7);color:#fff;font:bold 12px monospace;padding:3px 8px;border-radius:6px;">v10</div>
 <script src="./three.min.js"></script>
 <script>const BOLUMLER=[
 {robot:5, can:3,hiz:1.3,kelimeler:["kedi","elma","masa","balık","yağmur","kuzu"]},
@@ -463,13 +463,14 @@ if(k>0){if(bb)bb.textContent="Devam Et — Bolum "+(k+1);if(rb)rb.style.display=
 else{if(bb)bb.textContent="Basla";if(rb)rb.style.display="none";}}catch(_){}}
 function istatOku(){try{return JSON.parse(localStorage.getItem(ISTAT_LS)||"{}");}catch(_){return {};}}
 function istatYaz(o){try{localStorage.setItem(ISTAT_LS,JSON.stringify(o));}catch(_){}}
-function istatKayit(kelime){var o=istatOku();var k=o[kelime];if(!k){k={deneme:0,basari:0,pes:0,puanlar:[],sonPuan:null};o[kelime]=k;}return {o:o,k:k};}
-function istatSonuc(kelime,basarili,puan){if(!kelime)return;var r=istatKayit(kelime);r.k.deneme++;if(basarili)r.k.basari++;
+function istatKayit(kelime){var o=istatOku();var k=o[kelime];if(!k){k={deneme:0,basari:0,pes:0,puanlar:[],sonPuan:null,denemeler:[],ilk:0};o[kelime]=k;}if(!k.denemeler)k.denemeler=[];if(typeof k.ilk!=="number")k.ilk=0;return {o:o,k:k};}
+function istatSonuc(kelime,basarili,puan,triesN){if(!kelime)return;var r=istatKayit(kelime);r.k.deneme++;if(basarili)r.k.basari++;
+if(basarili && typeof triesN==="number"){r.k.denemeler.push({t:Date.now(),n:triesN});if(r.k.denemeler.length>30)r.k.denemeler=r.k.denemeler.slice(-30);if(triesN===1)r.k.ilk++;}
 if(typeof puan==="number"&&puan>0){r.k.sonPuan=Math.round(puan);r.k.puanlar.push({t:Date.now(),p:Math.round(puan)});if(r.k.puanlar.length>30)r.k.puanlar=r.k.puanlar.slice(-30);}
 istatYaz(r.o);}
 function istatPes(kelime){if(!kelime)return;var r=istatKayit(kelime);r.k.pes++;istatYaz(r.o);}
 var _sonPuan=null;
-function telaffuzBasarili(){istatSonuc(aktifKelime,true,_sonPuan);document.getElementById("kelime").textContent="🎉";document.getElementById("durum").innerHTML="Harika!";
+function telaffuzBasarili(){istatSonuc(aktifKelime,true,_sonPuan,deneme+1);document.getElementById("kelime").textContent="🎉";document.getElementById("durum").innerHTML="Harika!";
 seslendir("Aferin!",null);
 const cb=basariCb;aktifKelime=null;basariCb=null;
 setTimeout(()=>{telaffuzPanelKapat();if(cb)cb();},900);}
@@ -542,7 +543,7 @@ function taniyiciKur(){taniyici=new TanimaAPI();taniyici.lang="tr-TR";taniyici.i
 taniyici.onresult=e=>{sonucGeldi=true;var alts=[];try{for(var i=0;i<e.results[0].length;i++)alts.push(e.results[0][i].transcript||"");}catch(_){}
 var enOlasi=alts[0]||"";
 document.getElementById("duydum").textContent="duydugum: "+enOlasi;
-var uydu=aktifKelime&&alts.some(function(a){return sadelestir(a)===sadelestir(aktifKelime);});
+var uydu=aktifKelime&&alts.some(function(a){return esMetin(a)===esMetin(aktifKelime);});
 if(uydu)telaffuzBasarili();
 else if(aktifKelime)telaffuzBasarisiz(true);};
 taniyici.onerror=ev=>{if(izinDenemesi){izinDenemesi=false;try{taniyici.stop();}catch(_){}
@@ -652,7 +653,7 @@ try{
 }catch(_){cozuldu=false;}
 _sonPuan=(cozuldu&&puan>0)?puan:null;
 var esik=azureEsikOku();
-var metinTuttu=(sadelestir(duyulan)===sadelestir(aktifKelime));
+var metinTuttu=(esMetin(duyulan)===esMetin(aktifKelime));
 taniLog("duy:'"+duyulan+"' puan "+Math.round(puan)+" enDusuk "+Math.round(enDusukKelime)+" coz "+cozuldu+" metin:"+(metinTuttu?"tuttu":"tutmadi"));
 var dd=document.getElementById("duydum");if(dd)dd.textContent="duydugum: "+duyulan+" ("+Math.round(puan)+")";
   if(!aktifKelime){ /* iptal edildi */ }
@@ -720,6 +721,8 @@ sonucGeldi=false;dinliyor=true;document.getElementById("durum").textContent="Din
 clearTimeout(sessizlikTimer);sessizlikTimer=setTimeout(()=>{try{taniyici.stop();}catch(_){}} ,5000);
 try{taniyici.start();}catch(_){dinliyor=false;}}
 function sadelestir(s){return s.toLocaleLowerCase("tr").replace(/[.,!?;:]/g,"").replace(/\s+/g," ").trim();}
+// Bilesik kelimelerde STT bazen bosluk ekler ("gok bilim" ~ "gokbilim"); bosluga duyarsiz karsilastir.
+function esMetin(s){return sadelestir(s).replace(/\s+/g,"");}
 // TAM TELAFFUZ: sadece kucuk/buyuk harf ve noktalama normalize edilir; harf farki KABUL EDILMEZ.
 // Konusma tanima alternatiflerinden herhangi biri hedefle birebir esitse dogru sayilir.
 // Tanima modu: tam eslesme (normalize edilmis) kullaniliyor; toleransli eslesme kaldirildi.

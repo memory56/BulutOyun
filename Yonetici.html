@@ -414,17 +414,24 @@ const o=raporIstatOku();const anahtarlar=Object.keys(o);
 const hedef=document.getElementById("raporIcerik");if(!hedef)return;
 if(!anahtarlar.length){hedef.innerHTML="<div class='bos'>Henüz oyun verisi yok. Çocuk oynadıkça buraya düşer.</div>";return;}
 let bolumMap={};try{const t=await tumKelimeler();t.forEach(k=>bolumMap[k.metin]=k.bolum);}catch(_){}
-const satirlar=anahtarlar.map(function(m){const k=o[m];const oran=k.deneme?Math.round(100*k.basari/k.deneme):0;return {m:m,k:k,oran:oran};});
-satirlar.sort(function(a,b){return a.oran-b.oran || b.k.deneme-a.k.deneme;});
-let html="<table><thead><tr><th>Kelime</th><th>Böl.</th><th>Den.</th><th>Başarı</th><th>Son</th><th>Seyir</th></tr></thead><tbody>";
+const satirlar=anahtarlar.map(function(m){const k=o[m];const oran=k.deneme?Math.round(100*k.basari/k.deneme):0;
+const dz=(k.denemeler||[]);const gecis=dz.length;
+const ort=gecis?(dz.reduce(function(a,x){return a+(x.n||1);},0)/gecis):0;
+const ilkOran=gecis?Math.round(100*(k.ilk||0)/gecis):0;
+return {m:m,k:k,oran:oran,gecis:gecis,ort:ort,ilkOran:ilkOran,dz:dz};});
+// En cok zorlanilan ustte: once ort. deneme yuksek olan, sonra ilk-tek dusuk olan
+satirlar.sort(function(a,b){return (b.ort-a.ort) || (a.ilkOran-b.ilkOran) || (b.k.deneme-a.k.deneme);});
+let html="<table><thead><tr><th>Kelime</th><th>Böl.</th><th>Başarı</th><th>İlk-tek</th><th>Ort. deneme</th><th>Eğilim</th></tr></thead><tbody>";
 for(const s of satirlar){
-const trend=(s.k.puanlar&&s.k.puanlar.length)?s.k.puanlar.slice(-5).map(function(p){return p.p;}).join(" → "):"—";
+const trend=s.dz.length?s.dz.slice(-6).map(function(x){return x.n;}).join(" → "):"—";
 const oranSinif=s.oran>=70?"iyi":(s.oran<40?"zor":"");
-const sp=(s.k.sonPuan!=null)?s.k.sonPuan:"—";
+const ilkSinif=s.ilkOran>=70?"iyi":(s.ilkOran<40&&s.gecis?"zor":"");
 const pes=s.k.pes?(" · "+s.k.pes+" pes"):"";
-html+="<tr><td class='kelime'>"+kacis(s.m)+"</td><td>"+(bolumMap[s.m]||"—")+"</td><td>"+s.k.deneme+"</td><td class='"+oranSinif+"'>%"+s.oran+" ("+s.k.basari+"/"+s.k.deneme+")"+pes+"</td><td>"+sp+"</td><td style='color:#5a6b7b'>"+trend+"</td></tr>";
+const ortG=s.gecis?s.ort.toFixed(1):"—";
+html+="<tr><td class='kelime'>"+kacis(s.m)+"</td><td>"+(bolumMap[s.m]||"—")+"</td><td class='"+oranSinif+"'>%"+s.oran+" ("+s.k.basari+"/"+s.k.deneme+")"+pes+"</td><td class='"+ilkSinif+"'>"+(s.gecis?("%"+s.ilkOran):"—")+"</td><td>"+ortG+"</td><td style='color:#5a6b7b'>"+trend+"</td></tr>";
 }
-html+="</tbody></table>";hedef.innerHTML=html;
+html+="</tbody></table><p style='font-size:.78rem;color:#5a6b7b;margin-top:8px;'>Puan yok (Azure Türkçe telaffuz puanı vermiyor). Gelişim göstergesi: <b>İlk-tek</b> = ilk denemede geçme oranı, <b>Ort. deneme</b> = geçene kadar kaç deneme (düştükçe iyi), <b>Eğilim</b> = son geçişlerin deneme sayısı.</p>";
+hedef.innerHTML=html;
 }
 function istatSil(){if(!confirm("Tüm ilerleme raporu (oyun istatistikleri) silinsin mi? Kelimeler ve sesler silinmez."))return;localStorage.removeItem(ISTAT_LS);raporCiz();}
 

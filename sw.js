@@ -1,4 +1,4 @@
-const CACHE = "bulutoyun-v9";
+const CACHE = "bulutoyun-v10";
 const ASSETS = ["./BulutOyunTD.html", "./manifest.json", "./icon.svg", "./three.min.js"];
 self.addEventListener("install", (e) => { e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)).then(() => self.skipWaiting())); });
 self.addEventListener("activate", (e) => { e.waitUntil(caches.keys().then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)))).then(() => self.clients.claim())); });

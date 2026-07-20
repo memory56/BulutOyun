@@ -66,16 +66,6 @@ display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
 <button class="b-mor" onclick="azureKaydet()">💾 Kaydet</button>
 <button class="b-gri" onclick="azureTemizle()">🗑 Temizle</button>
 </div>
-<div style="margin-top:12px;border-top:1px solid #eef2f6;padding-top:10px;">
-<label style="font-weight:700;color:#2c3e50;display:block;margin-bottom:6px;">Telaffuz hassasiyeti</label>
-<p class="not" style="margin-bottom:8px;">Doğru telaffuzlar sık sık "yanlış" sayılıyorsa <b>Kolay</b>'ı seçin; çocuk ilerledikçe artırın. (Yalnızca Azure açıkken etkilidir.)</p>
-<div class="satir">
-<button class="b-gri mini" onclick="hassasiyetSec(65)">😊 Kolay</button>
-<button class="b-gri mini" onclick="hassasiyetSec(80)">🙂 Orta</button>
-<button class="b-gri mini" onclick="hassasiyetSec(92)">🧐 Zor</button>
-</div>
-<span id="hassasiyetDurum" class="durumEt" style="margin-top:8px;display:inline-block;"></span>
-</div>
 </div>
 
 <div class="cubuk">
@@ -300,7 +290,7 @@ ses: await blobToBase64(k.sesBlob)
 });
 }
 const veri={surum:3, tarih:new Date().toISOString(), kelimeler:disa,
-azure:{anahtar:localStorage.getItem(AZURE_KEY_LS)||"", bolge:localStorage.getItem(AZURE_REGION_LS)||"", esik:localStorage.getItem(AZURE_ESIK_LS)||""},
+azure:{anahtar:localStorage.getItem(AZURE_KEY_LS)||"", bolge:localStorage.getItem(AZURE_REGION_LS)||""},
 istatistik:raporIstatOku()};
 const blob=new Blob([JSON.stringify(veri)],{type:"application/json"});
 const a=document.createElement("a");
@@ -328,7 +318,6 @@ if(kEl&&veri.azure.anahtar)kEl.value=veri.azure.anahtar;
 if(rEl&&veri.azure.bolge)rEl.value=veri.azure.bolge;
 azureDurumGuncelle();
 }
-if(veri.azure&&veri.azure.esik){try{localStorage.setItem(AZURE_ESIK_LS,String(veri.azure.esik));}catch(_){}hassasiyetDurumGuncelle();}
 if(veri.istatistik){try{localStorage.setItem(ISTAT_LS,JSON.stringify(veri.istatistik));}catch(_){}raporCiz();}
 alert("Yedek yüklendi.");
 listeCiz();
@@ -396,13 +385,6 @@ azureDurumGuncelle();
 }
 
 /* ============================================================
-TELAFFUZ HASSASIYETI (localStorage: bulutAzureEsik) — oyun bu esigi okur
-============================================================ */
-const AZURE_ESIK_LS="bulutAzureEsik";
-function hassasiyetSec(v){try{localStorage.setItem(AZURE_ESIK_LS,String(v));}catch(_){}hassasiyetDurumGuncelle();}
-function hassasiyetDurumGuncelle(){var el=document.getElementById("hassasiyetDurum");if(!el)return;var v=parseInt(localStorage.getItem(AZURE_ESIK_LS)||"80",10);if(isNaN(v))v=80;var ad=v<=69?"Kolay":(v>=90?"Zor":"Orta");el.textContent="Seçili: "+ad+" (eşik "+v+")";el.className="durumEt aktif";}
-
-/* ============================================================
 İLERLEME RAPORU — oyunun localStorage istatistigi (bulutIstatistik)
 Oyun ve panel ayni origin oldugundan localStorage ortaktir.
 ============================================================ */
@@ -438,7 +420,7 @@ function istatSil(){if(!confirm("Tüm ilerleme raporu (oyun istatistikleri) sili
 /* ============================================================
 BAŞLAT
 ============================================================ */
-(async ()=>{ await dbAc(); listeCiz(); azureDurumGuncelle(); raporCiz(); hassasiyetDurumGuncelle();
+(async ()=>{ await dbAc(); listeCiz(); azureDurumGuncelle(); raporCiz();
 const r=localStorage.getItem(AZURE_REGION_LS); if(r)document.getElementById("azureRegion").value=r;
 const k=localStorage.getItem(AZURE_KEY_LS); if(k)document.getElementById("azureKey").value=k; })();
 </script>

@@ -529,12 +529,13 @@ function kelimeyiSesliOku(){if(aktifKelime)yonlendirVeSoyle(true);}
 function tekrarDinle(){if(!aktifKelime)return;document.getElementById("duydum").textContent="";yonlendirVeSoyle(false);}
 // Sozlu yonlendirme: once yonergeyi soyle, sonra kelimeyi (kayitli ses ya da TTS), sonra dogrudan dinle.
 // Yazili metne gerek yok; cocuk duyup tekrar eder.
+var YONERGELER=["Hadi, benimle söyle:","Şimdi sıra sende, söyle bakalım:","Beni dinle, sonra sen söyle:","Haydi birlikte söyleyelim:"];
 function yonlendirVeSoyle(ilk){if(!aktifKelime)return;
-const yonerge=ilk?"Şimdi söyleyeceğim kelimeyi benden sonra tekrar et.":"Tekrar dinle, benden sonra söyle.";
 const kEl=document.getElementById("kelime"),dEl=document.getElementById("durum");
 kEl.textContent="🎧";if(dEl)dEl.textContent="Dinle...";
-seslendir(yonerge,()=>{if(!aktifKelime)return;
-seslendir(aktifKelime,()=>{if(!aktifKelime)return;kEl.textContent="🎤";if(dEl)dEl.textContent="Şimdi sen söyle";dinlemeyeBasla();});});}
+function kelimeyiSoyleVeDinle(){if(!aktifKelime)return;seslendir(aktifKelime,()=>{if(!aktifKelime)return;kEl.textContent="🎤";if(dEl)dEl.textContent="Şimdi sen söyle";dinlemeyeBasla();});}
+if(ilk){var y=YONERGELER[Math.floor(Math.random()*YONERGELER.length)];seslendir(y,kelimeyiSoyleVeDinle);}
+else{kelimeyiSoyleVeDinle();}}
 const TanimaAPI=window.SpeechRecognition||window.webkitSpeechRecognition;
 let taniyici=null,dinliyor=false,sonucGeldi=false,izinDenemesi=false,mikrofonReddedildi=false,sessizlikTimer=null;
 function taniyiciKur(){taniyici=new TanimaAPI();taniyici.lang="tr-TR";taniyici.interimResults=false;taniyici.maxAlternatives=5;

@@ -117,7 +117,7 @@ Robot yok ettikce para kazanir, daha cok kule dikersin! Kuleye tekrar dokununca 
 <button onclick="oyunuBaslat(false)">Basla</button>
 <button id="bastanBtn" onclick="oyunuBaslat(true)" style="display:none;background:#8d99ae;font-size:1rem;padding:12px 22px;">Baştan başla</button>
 <button id="kurBtn" onclick="uygulamayiKur()" style="display:none;background:#2ecc71;font-size:1rem;padding:12px 22px;">⬇️ Uygulama olarak yükle</button>
-<div style="margin-top:10px;font-size:.75rem;color:#8d99ae;">sürüm 17</div>
+<div style="margin-top:10px;font-size:.75rem;color:#8d99ae;">sürüm 18</div>
 </div>
 <div id="kutlama">
 <div class="buyuk" id="kutlamaEmoji">Tebrikler</div>
@@ -465,11 +465,16 @@ if(k>0){if(bb)bb.textContent="Devam Et — Bolum "+(k+1);if(rb)rb.style.display=
 else{if(bb)bb.textContent="Basla";if(rb)rb.style.display="none";}}catch(_){}}
 /* ==== MASAUSTU / TABLET KURULUMU (PWA install) ==== */
 var kurulumIstemi=null;
-window.addEventListener("beforeinstallprompt",function(e){e.preventDefault();kurulumIstemi=e;var b=document.getElementById("kurBtn");if(b)b.style.display="";});
+window.addEventListener("beforeinstallprompt",function(e){e.preventDefault();kurulumIstemi=e;kurButonGuncelle();});
 window.addEventListener("appinstalled",function(){kurulumIstemi=null;var b=document.getElementById("kurBtn");if(b)b.style.display="none";});
 function zatenKurulu(){try{return window.matchMedia("(display-mode: standalone)").matches||window.matchMedia("(display-mode: fullscreen)").matches||window.navigator.standalone===true;}catch(_){return false;}}
+// Uygulama penceresinde degilsek dugmeyi goster; istem gelmemis olsa bile tiklayinca aciklama versin.
+function kurButonGuncelle(){var b=document.getElementById("kurBtn");if(!b)return;b.style.display=zatenKurulu()?"none":"";}
 async function uygulamayiKur(){
- if(!kurulumIstemi){alert("Yükleme secenegi su an kullanilamiyor.\n\nChrome/Edge adres cubugunun sagindaki yukleme simgesine ya da menude \"Uygulamayi yukle\" secenegine bakin.");return;}
+ if(!kurulumIstemi){
+  alert("Yukleme istemi su an gelmedi.\n\nEn olasi sebep: uygulama BU tarayiciya zaten kurulu. Chrome'da chrome://apps adresine ya da Baslat menusune bakin. Yeniden kurmak isterseniz once mevcut uygulamayi kaldirin.\n\nDigger sebepler:\n- Firefox / Safari masaustunde PWA kurulumunu desteklemez (Chrome veya Edge kullanin).\n- Sayfa henuz yeni acildiysa birkac saniye bekleyip tekrar deneyin.\n\nElle kurmak icin: adres cubugunun sagindaki yukleme simgesi, ya da menu (⋮) > \"Uygulamayi yukle\".");
+  return;
+ }
  var b=document.getElementById("kurBtn");if(b)b.disabled=true;
  try{kurulumIstemi.prompt();await kurulumIstemi.userChoice;}catch(_){}
  kurulumIstemi=null;if(b){b.disabled=false;b.style.display="none";}
@@ -804,6 +809,7 @@ addEventListener("click",tikOlayi);
 addEventListener("touchstart",e=>{tikOlayi(e);},{passive:true});
 kurulum();
 basToGuncelle();
+kurButonGuncelle();
 if("speechSynthesis"in window)speechSynthesis.onvoiceschanged=sesleriCoz;
 dongu();
 </script>

@@ -117,7 +117,12 @@ Robot yok ettikce para kazanir, daha cok kule dikersin! Kuleye tekrar dokununca 
 <button onclick="oyunuBaslat(false)">Basla</button>
 <button id="bastanBtn" onclick="oyunuBaslat(true)" style="display:none;background:#8d99ae;font-size:1rem;padding:12px 22px;">Baştan başla</button>
 <button id="kurBtn" onclick="uygulamayiKur()" style="display:none;background:#2ecc71;font-size:1rem;padding:12px 22px;">⬇️ Uygulama olarak yükle</button>
-<div style="margin-top:10px;font-size:.75rem;color:#8d99ae;">sürüm 19</div>
+<div style="margin-top:10px;font-size:.75rem;color:#8d99ae;">sürüm 20</div>
+<div style="margin-top:8px;">
+<button onclick="sesTesti()" style="background:#f39c12;font-size:.95rem;padding:10px 18px;">🔊 Ses testi</button>
+<button onclick="kazancDegistir()" style="background:#8d99ae;font-size:.85rem;padding:8px 14px;">Yükseltmeyi aç/kapa</button>
+</div>
+<div id="sesTestSonuc" style="display:none;margin-top:8px;text-align:left;background:#111;color:#7CFC00;font:12px/1.5 monospace;padding:8px 10px;border-radius:8px;max-height:34vh;overflow:auto;"></div>
 </div>
 <div id="kutlama">
 <div class="buyuk" id="kutlamaEmoji">Tebrikler</div>
@@ -463,6 +468,57 @@ function ilerlemeYukle(){try{var v=parseInt(localStorage.getItem(ILERLEME_LS)||"
 function basToGuncelle(){try{var k=ilerlemeYukle();var bb=document.querySelector("#basla > button");var rb=document.getElementById("bastanBtn");
 if(k>0){if(bb)bb.textContent="Devam Et — Bolum "+(k+1);if(rb)rb.style.display="";}
 else{if(bb)bb.textContent="Basla";if(rb)rb.style.display="none";}}catch(_){}}
+/* ==== SES TESTI: hangi ses yolunun calistigini bulur ==== */
+function sesTestYaz(s){var k=document.getElementById("sesTestSonuc");if(k){k.style.display="";k.innerHTML+=s+"<br>";}}
+async function sesTesti(){
+ var k=document.getElementById("sesTestSonuc");if(k){k.style.display="";k.innerHTML="";}
+ // 1) Web Audio bip (kayitli seslerin gectigi yol)
+ try{
+  var ctx=window.__oynatCtx||(window.__oynatCtx=new (window.AudioContext||window.webkitAudioContext)());
+  if(ctx.state!=="running"){try{await ctx.resume();}catch(_){}}
+  sesTestYaz("Ses baglami: <b>"+ctx.state+"</b>");
+  var osc=ctx.createOscillator(),g=ctx.createGain();
+  osc.frequency.value=440;g.gain.value=0.3;osc.connect(g);g.connect(ctx.destination);
+  osc.start();setTimeout(function(){try{osc.stop();}catch(_){}},700);
+  sesTestYaz("1) BİP çalındı — duydunuz mu?");
+ }catch(e){sesTestYaz("1) BİP hata: "+(e&&e.message));}
+ // 2) TTS (yonergelerin gectigi yol)
+ setTimeout(function(){
+  try{
+   if(!("speechSynthesis"in window)){sesTestYaz("2) TTS: tarayicida yok");return;}
+   var v=speechSynthesis.getVoices()||[];
+   var tr=v.filter(function(x){return /^tr/i.test(x.lang);});
+   sesTestYaz("Ses motoru: "+v.length+" ses | Türkçe: <b>"+(tr.length?tr.map(function(x){return x.name;}).join(", "):"YOK")+"</b>");
+   speechSynthesis.cancel();
+   setTimeout(function(){
+    var u=new SpeechSynthesisUtterance("ses testi");u.lang="tr-TR";
+    if(secilenSes)u.voice=secilenSes;
+    u.onend=function(){sesTestYaz("2) TTS bitti — duydunuz mu?");};
+    u.onerror=function(ev){sesTestYaz("2) TTS <b>HATA</b>: "+((ev&&ev.error)||"?"));};
+    speechSynthesis.speak(u);
+   },200);
+  }catch(e){sesTestYaz("2) TTS hata: "+(e&&e.message));}
+ },900);
+ // 3) Kayitli ses (varsa duz <audio> ile)
+ setTimeout(async function(){
+  try{
+   await panelDbAc();await panelKelimeleriYukle();
+   var kayitlar=(panelKelimeler||[]).filter(function(x){return x.sesBlob&&x.sesBlob.size>0;});
+   sesTestYaz("Kayıtlı ses: <b>"+kayitlar.length+"</b> kelime");
+   if(kayitlar.length){
+    var o=document.getElementById("oynatici");
+    o.src=URL.createObjectURL(kayitlar[0].sesBlob);
+    o.onerror=function(){sesTestYaz("3) Kayıt çalma <b>HATA</b>");};
+    o.play().then(function(){sesTestYaz("3) Kayıt çalındı ('"+kayitlar[0].metin+"') — duydunuz mu?");}).catch(function(er){sesTestYaz("3) Kayıt <b>HATA</b>: "+(er&&er.name));});
+   }
+  }catch(e){sesTestYaz("3) Kayıt hata: "+(e&&e.message));}
+ },2600);
+}
+function kazancDegistir(){
+ var yeni=kazancKapaliMi()?"0":"1";
+ try{localStorage.setItem("bulutKazancKapali",yeni);}catch(_){}
+ alert(yeni==="1"?"Kayıt sesi yükseltme KAPATILDI. Sayfayı kapatıp yeniden açın.":"Kayıt sesi yükseltme AÇILDI. Sayfayı kapatıp yeniden açın.");
+}
 /* ==== MASAUSTU / TABLET KURULUMU (PWA install) ==== */
 var kurulumIstemi=null;
 window.addEventListener("beforeinstallprompt",function(e){e.preventDefault();kurulumIstemi=e;kurButonGuncelle();});
@@ -524,14 +580,20 @@ function taniLog(m){try{var k=document.getElementById("tanikutu");if(!k)return;v
 // Kayitli seslerin sesini yukseltmek icin oynaticiyi Web Audio uzerinden guclendir (kazanc + limiter).
 // <audio>.volume 1.0'i gecemez; TTS ile ayni seviyeye gelmesi icin gain kullaniyoruz.
 var KAYIT_KAZANC=3.0;
+function kazancKapaliMi(){try{return localStorage.getItem("bulutKazancKapali")==="1";}catch(_){return false;}}
+// Ses baglamini her dokunusta uyandir: Android/Samsung Internet baglami askiya alabiliyor -> tam sessizlik
+function sesBaglamiUyandir(){try{var c=window.__oynatCtx;if(c&&c.state!=="running")c.resume();}catch(_){}}
+document.addEventListener("pointerdown",sesBaglamiUyandir,{passive:true});
+document.addEventListener("touchstart",sesBaglamiUyandir,{passive:true});
 function oynaticiKazancKur(){
+ if(kazancKapaliMi())return null;                      // yukseltme kapali -> duz <audio> ile cal
  if(window.__oynatKuruldu)return window.__oynatKuruldu;
  try{
   var o=document.getElementById("oynatici");
   var ctx=window.__oynatCtx||(window.__oynatCtx=new (window.AudioContext||window.webkitAudioContext)());
   // Askidaysa BAGLAMA: createMediaElementSource geri alinamaz, askida kalirsa ses tamamen kesilir.
-  // Once uyandirmayi dene; hazir degilse duz <audio> ile cal (biraz kisik ama duyulur).
   if(ctx.state!=="running"){try{ctx.resume();}catch(_){}return null;}
+  ctx.onstatechange=function(){if(ctx.state!=="running"){try{ctx.resume();}catch(_){}}};
   var src=ctx.createMediaElementSource(o),g=ctx.createGain(),lim=ctx.createDynamicsCompressor();
   g.gain.value=KAYIT_KAZANC;
   lim.threshold.value=-6;lim.knee.value=0;lim.ratio.value=20;lim.attack.value=0.003;lim.release.value=0.15;

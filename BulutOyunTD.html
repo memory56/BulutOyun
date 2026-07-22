@@ -117,7 +117,7 @@ Robot yok ettikce para kazanir, daha cok kule dikersin! Kuleye tekrar dokununca 
 <button onclick="oyunuBaslat(false)">Basla</button>
 <button id="bastanBtn" onclick="oyunuBaslat(true)" style="display:none;background:#8d99ae;font-size:1rem;padding:12px 22px;">Baştan başla</button>
 <button id="kurBtn" onclick="uygulamayiKur()" style="display:none;background:#2ecc71;font-size:1rem;padding:12px 22px;">⬇️ Uygulama olarak yükle</button>
-<div style="margin-top:10px;font-size:.75rem;color:#8d99ae;">sürüm 21</div>
+<div style="margin-top:10px;font-size:.75rem;color:#8d99ae;">sürüm 22</div>
 </div>
 <div id="kutlama">
 <div class="buyuk" id="kutlamaEmoji">Tebrikler</div>
@@ -577,11 +577,13 @@ function tekrarDinle(){if(!aktifKelime)return;document.getElementById("duydum").
 // Sozlu yonlendirme: once yonergeyi soyle, sonra kelimeyi (kayitli ses ya da TTS), sonra dogrudan dinle.
 // Yazili metne gerek yok; cocuk duyup tekrar eder.
 var YONERGELER=["Hadi, benimle söyle:","Şimdi sıra sende, söyle bakalım:","Beni dinle, sonra sen söyle:","Haydi birlikte söyleyelim:"];
+// Kaydi olan yonergeleri tercih et (cihazin robot sesi devreye girmesin)
+function yonergeSec(){var kayitli=YONERGELER.filter(function(y){return kelimeKaydiBul(y);});var d=kayitli.length?kayitli:YONERGELER;return d[Math.floor(Math.random()*d.length)];}
 function yonlendirVeSoyle(ilk){if(!aktifKelime)return;
 const kEl=document.getElementById("kelime"),dEl=document.getElementById("durum");
 kEl.textContent="🎧";if(dEl)dEl.textContent="Dinle...";
 function kelimeyiSoyleVeDinle(){if(!aktifKelime)return;seslendir(aktifKelime,()=>{if(!aktifKelime)return;kEl.textContent="🎤";if(dEl)dEl.textContent="Şimdi sen söyle";dinlemeyeBasla();});}
-if(ilk){var y=YONERGELER[Math.floor(Math.random()*YONERGELER.length)];seslendir(y,kelimeyiSoyleVeDinle);}
+if(ilk){var y=yonergeSec();seslendir(y,kelimeyiSoyleVeDinle);}
 else{kelimeyiSoyleVeDinle();}}
 const TanimaAPI=window.SpeechRecognition||window.webkitSpeechRecognition;
 let taniyici=null,dinliyor=false,sonucGeldi=false,izinDenemesi=false,mikrofonReddedildi=false,sessizlikTimer=null;

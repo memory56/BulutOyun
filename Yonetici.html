@@ -105,6 +105,12 @@ display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
 
 <div id="liste"></div>
 
+<div class="rapor" id="yonergeKart" style="border-color:#9b59b6;">
+<h2>🗣️ Yönerge Sesleri (kendi sesin)</h2>
+<p style="font-size:.8rem;color:#5a6b7b;margin:6px 0 4px;">Oyunun çocuğa söylediği kalıp cümleler. Kaydetmezseniz cihazın robot sesi (TTS) kullanılır; bu tablette TTS çalışmadığı için <b>kaydetmeniz önerilir</b>. Kaydı olan yönergeler oyunda önce tercih edilir.</p>
+<div id="yonergeListe"></div>
+</div>
+
 <audio id="gizliAudio"></audio>
 
 <script>
@@ -115,6 +121,17 @@ kayıt: {id, metin, bolum, sesBlob(Blob|null), olusturma}
 ============================================================ */
 const DB_ADI="BulutOyunDB", STORE="kelimeler";
 const BOLUM_SAYISI=8;
+/* Oyunun sesli soyledigi kalip cumleler. Metinler oyundakiyle BIREBIR ayni olmalidir;
+   oyun kaydi metne gore bulur. Bunlar bolum=0 ile saklanir, oyun kelimesi olarak cikmaz. */
+const YONERGE_METINLER=[
+ "Hadi, benimle söyle:",
+ "Şimdi sıra sende, söyle bakalım:",
+ "Beni dinle, sonra sen söyle:",
+ "Haydi birlikte söyleyelim:",
+ "Aferin!",
+ "Önemli değil, sonra yine deneriz.",
+ "Aferin Bulut! Tum bolumleri bitirdin. Harikasin!"
+];
 let db=null;
 
 function dbAc(){
@@ -182,8 +199,10 @@ listeCiz();
 }
 
 async function listeCiz(){
-const kelimeler=await tumKelimeler();
+const hepsi=await tumKelimeler();
+const kelimeler=hepsi.filter(k=>(k.bolum||0)>0);   // bolum 0 = yonerge sesleri, oyun kelimesi degil
 const liste=document.getElementById("liste");
+yonergeListeCiz(hepsi);
 if(!kelimeler.length){ liste.innerHTML='<p class="aciklama">Henüz kelime yok. Yukarıdan yeni kelime ekleyin.</p>'; return; }
 liste.innerHTML="";
 for(const k of kelimeler){
@@ -222,6 +241,51 @@ silBtn.onclick=()=>silTikla(k.id);
 kart.append(rozet,metinEl,durumEl,kayitBtn,dinleBtn,silBtn);
 liste.appendChild(kart);
 }
+}
+
+/* ============================================================
+YÖNERGE SESLERİ — oyunun kalıp cümleleri (bolum=0)
+============================================================ */
+function yonergeListeCiz(hepsi){
+const kap=document.getElementById("yonergeListe"); if(!kap) return;
+kap.innerHTML="";
+for(const metin of YONERGE_METINLER){
+const k=(hepsi||[]).find(x=>x.metin===metin && (x.bolum||0)===0);
+const sesVar=!!(k && k.sesBlob && k.sesBlob.size>0);
+const kart=document.createElement("div"); kart.className="kart";
+const metinEl=document.createElement("span");
+metinEl.className="kmetin"; metinEl.textContent=metin;
+const durumEl=document.createElement("span");
+durumEl.className="durum "+(sesVar?"var":"yok");
+durumEl.textContent=sesVar?"🎤 ses var":"ses yok";
+const kayitBtn=document.createElement("button");
+kayitBtn.className="b-kirmizi mini"; kayitBtn.textContent=sesVar?"⏺ Yeniden":"⏺ Kaydet";
+kayitBtn.onclick=()=>yonergeKayitTikla(metin,kayitBtn);
+const dinleBtn=document.createElement("button");
+dinleBtn.className="b-mavi mini"; dinleBtn.textContent="▶ Dinle";
+dinleBtn.disabled=!sesVar; if(!sesVar) dinleBtn.style.opacity=.4;
+dinleBtn.onclick=()=>{ if(k) sesDinlet(k.id); };
+const silBtn=document.createElement("button");
+silBtn.className="b-gri mini"; silBtn.textContent="🗑";
+silBtn.disabled=!sesVar; if(!sesVar) silBtn.style.opacity=.4;
+silBtn.onclick=()=>yonergeSesSil(metin);
+kart.append(metinEl,durumEl,kayitBtn,dinleBtn,silBtn);
+kap.appendChild(kart);
+}
+}
+async function yonergeKayitTikla(metin,btn){
+if(medyaKayit && medyaKayit.state==="recording"){ kayitBaslatDur(null,btn); return; }
+const hepsi=await tumKelimeler();
+let k=hepsi.find(x=>x.metin===metin && (x.bolum||0)===0);
+if(!k){ k={id:idUret(),metin:metin,bolum:0,sesBlob:null,olusturma:Date.now()}; await kelimeKaydet(k); }
+kayitBaslatDur(k.id,btn);
+}
+async function yonergeSesSil(metin){
+if(!confirm("Bu yönergenin ses kaydı silinsin mi?\n(Silinirse cihazın robot sesi kullanılır.)")) return;
+const hepsi=await tumKelimeler();
+const k=hepsi.find(x=>x.metin===metin && (x.bolum||0)===0);
+if(k){ k.sesBlob=null; await kelimeKaydet(k); }
+listeCiz();
 }
 
 /* ============================================================

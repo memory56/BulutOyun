@@ -117,7 +117,7 @@ Robot yok ettikce para kazanir, daha cok kule dikersin! Kuleye tekrar dokununca 
 <button onclick="oyunuBaslat(false)">Basla</button>
 <button id="bastanBtn" onclick="oyunuBaslat(true)" style="display:none;background:#8d99ae;font-size:1rem;padding:12px 22px;">Baştan başla</button>
 <button id="kurBtn" onclick="uygulamayiKur()" style="display:none;background:#2ecc71;font-size:1rem;padding:12px 22px;">⬇️ Uygulama olarak yükle</button>
-<div style="margin-top:10px;font-size:.75rem;color:#8d99ae;">sürüm 23</div>
+<div style="margin-top:10px;font-size:.75rem;color:#8d99ae;">sürüm 24</div>
 </div>
 <div id="kutlama">
 <div class="buyuk" id="kutlamaEmoji">Tebrikler</div>
@@ -553,15 +553,21 @@ function oynaticiKazancKur(){
 }
 function seslendir(metin,bitince){
 var bitti=false,zaman=null;
-function tamam(){if(bitti)return;bitti=true;if(zaman){clearTimeout(zaman);zaman=null;}if(bitince)bitince();}
+// Geri cagriyi olay isleyicisinin DISINDA calistir: aksi halde bir sesin "bitti" olayi
+// icinden baslatilan yeni play() reddedilip ses atlaniyor.
+function tamam(){if(bitti)return;bitti=true;if(zaman){clearTimeout(zaman);zaman=null;}if(bitince)setTimeout(bitince,60);}
 function guvenlik(ms){zaman=setTimeout(tamam,ms);}   // ses bir sekilde bitmezse akis yine de devam etsin
 const kayit=kelimeKaydiBul(metin);
 if(kayit){const o=document.getElementById("oynatici");
 var kz=oynaticiKazancKur();try{if(kz&&kz.ctx&&kz.ctx.state==="suspended")kz.ctx.resume();}catch(_){}
-o.src=URL.createObjectURL(kayit.sesBlob);
+try{o.pause();}catch(_){}
+if(window.__sonSesURL){try{URL.revokeObjectURL(window.__sonSesURL);}catch(_){}}
+var url=URL.createObjectURL(kayit.sesBlob);window.__sonSesURL=url;
 o.onended=tamam;o.onerror=tamam;
+o.src=url;try{o.load();}catch(_){}
 guvenlik(12000);
-o.play().catch(tamam);
+var p=o.play();
+if(p&&p.catch)p.catch(function(){setTimeout(function(){var p2=o.play();if(p2&&p2.catch)p2.catch(tamam);},120);});
 return;}
 if(!("speechSynthesis"in window)){tamam();return;}
 if(!secilenSes)sesleriCoz();
@@ -589,7 +595,7 @@ function yonlendirVeSoyle(ilk){if(!aktifKelime)return;
 const kEl=document.getElementById("kelime"),dEl=document.getElementById("durum");
 kEl.textContent="🎧";if(dEl)dEl.textContent="Dinle...";
 function kelimeyiSoyleVeDinle(){if(!aktifKelime)return;seslendir(aktifKelime,()=>{if(!aktifKelime)return;kEl.textContent="🎤";if(dEl)dEl.textContent="Şimdi sen söyle";dinlemeyeBasla();});}
-if(ilk){var y=yonergeSec();seslendir(y,kelimeyiSoyleVeDinle);}
+if(ilk){var y=yonergeSec();seslendir(y,function(){setTimeout(kelimeyiSoyleVeDinle,320);});}
 else{kelimeyiSoyleVeDinle();}}
 const TanimaAPI=window.SpeechRecognition||window.webkitSpeechRecognition;
 let taniyici=null,dinliyor=false,sonucGeldi=false,izinDenemesi=false,mikrofonReddedildi=false,sessizlikTimer=null;

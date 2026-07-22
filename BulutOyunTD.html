@@ -117,7 +117,7 @@ Robot yok ettikce para kazanir, daha cok kule dikersin! Kuleye tekrar dokununca 
 <button onclick="oyunuBaslat(false)">Basla</button>
 <button id="bastanBtn" onclick="oyunuBaslat(true)" style="display:none;background:#8d99ae;font-size:1rem;padding:12px 22px;">Baştan başla</button>
 <button id="kurBtn" onclick="uygulamayiKur()" style="display:none;background:#2ecc71;font-size:1rem;padding:12px 22px;">⬇️ Uygulama olarak yükle</button>
-<div style="margin-top:10px;font-size:.75rem;color:#8d99ae;">sürüm 18</div>
+<div style="margin-top:10px;font-size:.75rem;color:#8d99ae;">sürüm 19</div>
 </div>
 <div id="kutlama">
 <div class="buyuk" id="kutlamaEmoji">Tebrikler</div>
@@ -472,7 +472,13 @@ function zatenKurulu(){try{return window.matchMedia("(display-mode: standalone)"
 function kurButonGuncelle(){var b=document.getElementById("kurBtn");if(!b)return;b.style.display=zatenKurulu()?"none":"";}
 async function uygulamayiKur(){
  if(!kurulumIstemi){
-  alert("Yukleme istemi su an gelmedi.\n\nEn olasi sebep: uygulama BU tarayiciya zaten kurulu. Chrome'da chrome://apps adresine ya da Baslat menusune bakin. Yeniden kurmak isterseniz once mevcut uygulamayi kaldirin.\n\nDigger sebepler:\n- Firefox / Safari masaustunde PWA kurulumunu desteklemez (Chrome veya Edge kullanin).\n- Sayfa henuz yeni acildiysa birkac saniye bekleyip tekrar deneyin.\n\nElle kurmak icin: adres cubugunun sagindaki yukleme simgesi, ya da menu (⋮) > \"Uygulamayi yukle\".");
+  var ua=navigator.userAgent||"";
+  var samsung=/SamsungBrowser/i.test(ua);
+  if(samsung){
+   alert("Samsung Internet kurulumu kendi menusunden yapar.\n\nAdimlar:\n1) Alttaki menu (☰) dugmesine dokunun.\n2) \"Sayfa ekle\" / \"Ana ekrana ekle\" secenegini secin.\n3) \"Ana ekran\" ya da \"Uygulamalar\" secip onaylayin.\n\nAdres cubugunda indirme/artı (+) simgesi cikarsa ona da dokunabilirsiniz.\n\nSecenek hic cikmiyorsa uygulama zaten kurulu olabilir: ana ekranda/uygulamalar arasinda \"BulutOyun\" simgesine bakin. Yeniden kurmak icin once onu kaldirin.");
+  }else{
+   alert("Yukleme istemi su an gelmedi.\n\nEn olasi sebep: uygulama bu tarayiciya zaten kurulu. Chrome'da chrome://apps adresine ya da Baslat menusune bakin; yeniden kurmak icin once kaldirin.\n\nDiger sebepler:\n- Firefox / Safari masaustunde PWA kurulumunu desteklemez (Chrome veya Edge kullanin).\n- Sayfa yeni acildiysa birkac saniye bekleyip tekrar deneyin.\n\nElle kurulum: adres cubugunun sagindaki yukleme simgesi, ya da menu (⋮) > \"Uygulamayi yukle\".");
+  }
   return;
  }
  var b=document.getElementById("kurBtn");if(b)b.disabled=true;

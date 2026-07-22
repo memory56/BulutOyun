@@ -117,7 +117,7 @@ Robot yok ettikce para kazanir, daha cok kule dikersin! Kuleye tekrar dokununca 
 <button onclick="oyunuBaslat(false)">Basla</button>
 <button id="bastanBtn" onclick="oyunuBaslat(true)" style="display:none;background:#8d99ae;font-size:1rem;padding:12px 22px;">Baştan başla</button>
 <button id="kurBtn" onclick="uygulamayiKur()" style="display:none;background:#2ecc71;font-size:1rem;padding:12px 22px;">⬇️ Uygulama olarak yükle</button>
-<div style="margin-top:10px;font-size:.75rem;color:#8d99ae;">sürüm 24</div>
+<div style="margin-top:10px;font-size:.75rem;color:#8d99ae;">sürüm 25</div>
 </div>
 <div id="kutlama">
 <div class="buyuk" id="kutlamaEmoji">Tebrikler</div>
@@ -441,8 +441,12 @@ sinavIdx++;setTimeout(sinavSonraki,500);
 },null);}
 
 let aktifKelime=null,basariCb=null,deneme=0;
+// Her yeni soru bir "nesil" acar. Eski akislarin gecikmeli geri cagrilari bu numarayla elenir;
+// aksi halde onceki kelimenin bekleyen zamanlayicisi yeni kelimenin akisina karisiyor.
+let soruNesil=0;
 const MAX_DENEME=3;
 function telaffuzSor(kelime,sira,toplam,onBasari){
+soruNesil++;var _n=soruNesil;
 aktifKelime=kelime;basariCb=onBasari;deneme=0;durakla=true;
 sinavKelimeler=(toplam>1)?sinavKelimeler:[];
 document.getElementById("kelime").textContent="🎧";
@@ -452,8 +456,8 @@ document.getElementById("durum").textContent="";
 document.getElementById("duydum").textContent="";
 document.getElementById("panel").classList.add("acik");
 muzikDurdur();
-setTimeout(kelimeyiSesliOku,300);}
-function telaffuzPanelKapat(){sesDur();try{if(taniyici)taniyici.stop();}catch(_){}
+setTimeout(function(){if(_n!==soruNesil)return;kelimeyiSesliOku();},300);}
+function telaffuzPanelKapat(){soruNesil++;sesDur();try{if(taniyici)taniyici.stop();}catch(_){}
 document.getElementById("panel").classList.remove("acik");
 if(muzikAcik&&!elDurdurma&&oyunAktif)muzikBaslat();}
 /* ==== ILERLEME KAYDI + KELIME ISTATISTIGI (localStorage) ==== */
@@ -495,7 +499,7 @@ istatYaz(r.o);}
 function istatPes(kelime){if(!kelime)return;var r=istatKayit(kelime);r.k.pes++;istatYaz(r.o);}
 var _sonPuan=null;
 function telaffuzBasarili(){istatSonuc(aktifKelime,true,_sonPuan,deneme+1);document.getElementById("kelime").textContent="🎉";document.getElementById("durum").innerHTML="Aferin!";
-const cb=basariCb;aktifKelime=null;basariCb=null;
+const cb=basariCb;aktifKelime=null;basariCb=null;soruNesil++;
 var kapandi=false,t0=Date.now();
 function bitir(){if(kapandi)return;kapandi=true;telaffuzPanelKapat();if(cb)cb();}
 // Ses bitince kapat (kayit uzun olabilir), en az 900ms ekranda kalsin, 10sn emniyet
@@ -508,7 +512,7 @@ skor=Math.max(0,skor-CEZA_PARA);
 document.getElementById("skor").textContent=skor;
 document.getElementById("kelime").textContent="🙂";
 document.getElementById("durum").innerHTML="Sonra tekrar deneriz. (-"+CEZA_PARA+" para)";
-const cb=basariCb;aktifKelime=null;basariCb=null;
+const cb=basariCb;aktifKelime=null;basariCb=null;soruNesil++;
 var kapandi2=false,t02=Date.now();
 function bitir2(){if(kapandi2)return;kapandi2=true;telaffuzPanelKapat();if(cb)cb();}
 // Ses bitince kapat (kayit uzun olabilir), en az 1100ms ekranda kalsin, 10sn emniyet
@@ -551,11 +555,15 @@ function oynaticiKazancKur(){
  }catch(_){window.__oynatKuruldu={ctx:null,gain:null};}
  return window.__oynatKuruldu;
 }
+var seslendirmeNo=0;
 function seslendir(metin,bitince){
+var benimNo=++seslendirmeNo;          // yeni seslendirme oncekini gecersiz kilar
 var bitti=false,zaman=null;
 // Geri cagriyi olay isleyicisinin DISINDA calistir: aksi halde bir sesin "bitti" olayi
 // icinden baslatilan yeni play() reddedilip ses atlaniyor.
-function tamam(){if(bitti)return;bitti=true;if(zaman){clearTimeout(zaman);zaman=null;}if(bitince)setTimeout(bitince,60);}
+function tamam(){if(bitti)return;bitti=true;if(zaman){clearTimeout(zaman);zaman=null;}
+if(benimNo!==seslendirmeNo)return;    // arada baska ses basladiysa bu akisi surdurme
+if(bitince)setTimeout(bitince,60);}
 function guvenlik(ms){zaman=setTimeout(tamam,ms);}   // ses bir sekilde bitmezse akis yine de devam etsin
 const kayit=kelimeKaydiBul(metin);
 if(kayit){const o=document.getElementById("oynatici");
@@ -592,10 +600,12 @@ var YONERGELER=["Hadi, benimle söyle:","Şimdi sıra sende, söyle bakalım:","
 // Kaydi olan yonergeleri tercih et (cihazin robot sesi devreye girmesin)
 function yonergeSec(){var kayitli=YONERGELER.filter(function(y){return kelimeKaydiBul(y);});var d=kayitli.length?kayitli:YONERGELER;return d[Math.floor(Math.random()*d.length)];}
 function yonlendirVeSoyle(ilk){if(!aktifKelime)return;
+var n=soruNesil;
 const kEl=document.getElementById("kelime"),dEl=document.getElementById("durum");
 kEl.textContent="🎧";if(dEl)dEl.textContent="Dinle...";
-function kelimeyiSoyleVeDinle(){if(!aktifKelime)return;seslendir(aktifKelime,()=>{if(!aktifKelime)return;kEl.textContent="🎤";if(dEl)dEl.textContent="Şimdi sen söyle";dinlemeyeBasla();});}
-if(ilk){var y=yonergeSec();seslendir(y,function(){setTimeout(kelimeyiSoyleVeDinle,320);});}
+function gecerli(){return n===soruNesil && !!aktifKelime;}
+function kelimeyiSoyleVeDinle(){if(!gecerli())return;seslendir(aktifKelime,function(){if(!gecerli())return;kEl.textContent="🎤";if(dEl)dEl.textContent="Şimdi sen söyle";dinlemeyeBasla();});}
+if(ilk){var y=yonergeSec();seslendir(y,function(){if(!gecerli())return;setTimeout(function(){if(gecerli())kelimeyiSoyleVeDinle();},320);});}
 else{kelimeyiSoyleVeDinle();}}
 const TanimaAPI=window.SpeechRecognition||window.webkitSpeechRecognition;
 let taniyici=null,dinliyor=false,sonucGeldi=false,izinDenemesi=false,mikrofonReddedildi=false,sessizlikTimer=null;

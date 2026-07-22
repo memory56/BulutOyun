@@ -517,6 +517,9 @@ function oynaticiKazancKur(){
  try{
   var o=document.getElementById("oynatici");
   var ctx=window.__oynatCtx||(window.__oynatCtx=new (window.AudioContext||window.webkitAudioContext)());
+  // Askidaysa BAGLAMA: createMediaElementSource geri alinamaz, askida kalirsa ses tamamen kesilir.
+  // Once uyandirmayi dene; hazir degilse duz <audio> ile cal (biraz kisik ama duyulur).
+  if(ctx.state!=="running"){try{ctx.resume();}catch(_){}return null;}
   var src=ctx.createMediaElementSource(o),g=ctx.createGain(),lim=ctx.createDynamicsCompressor();
   g.gain.value=KAYIT_KAZANC;
   lim.threshold.value=-6;lim.knee.value=0;lim.ratio.value=20;lim.attack.value=0.003;lim.release.value=0.15;
@@ -526,19 +529,32 @@ function oynaticiKazancKur(){
  return window.__oynatKuruldu;
 }
 function seslendir(metin,bitince){
+var bitti=false,zaman=null;
+function tamam(){if(bitti)return;bitti=true;if(zaman){clearTimeout(zaman);zaman=null;}if(bitince)bitince();}
+function guvenlik(ms){zaman=setTimeout(tamam,ms);}   // ses bir sekilde bitmezse akis yine de devam etsin
 const kayit=kelimeKaydiBul(metin);
 if(kayit){const o=document.getElementById("oynatici");
-var kz=oynaticiKazancKur();try{if(kz.ctx&&kz.ctx.state==="suspended")kz.ctx.resume();}catch(_){}
+var kz=oynaticiKazancKur();try{if(kz&&kz.ctx&&kz.ctx.state==="suspended")kz.ctx.resume();}catch(_){}
 o.src=URL.createObjectURL(kayit.sesBlob);
-o.onended=()=>{if(bitince)bitince();};
-o.play().catch(()=>{if(bitince)bitince();});
+o.onended=tamam;o.onerror=tamam;
+guvenlik(12000);
+o.play().catch(tamam);
 return;}
-if(!("speechSynthesis"in window)){if(bitince)bitince();return;}
-sesDur();if(!secilenSes)sesleriCoz();
-const u=new SpeechSynthesisUtterance(metin);u.lang="tr-TR";u.rate=0.7;u.pitch=1.0;
-if(secilenSes)u.voice=secilenSes;
-if(bitince)u.onend=()=>bitince();
-speechSynthesis.speak(u);}
+if(!("speechSynthesis"in window)){tamam();return;}
+if(!secilenSes)sesleriCoz();
+try{var op=document.getElementById("oynatici");if(op)op.pause();}catch(_){}
+try{speechSynthesis.cancel();}catch(_){}
+guvenlik(Math.max(4000,150*String(metin||"").length+2500));
+// Chrome'da cancel() hemen ardindan speak() sessizce dusebilir -> kisa bir gecikme birak
+setTimeout(function(){
+ if(bitti)return;
+ try{
+  const u=new SpeechSynthesisUtterance(metin);u.lang="tr-TR";u.rate=0.7;u.pitch=1.0;
+  if(secilenSes)u.voice=secilenSes;
+  u.onend=tamam;u.onerror=tamam;
+  speechSynthesis.speak(u);
+ }catch(_){tamam();}
+},140);}
 function kelimeyiSesliOku(){if(aktifKelime)yonlendirVeSoyle(true);}
 function tekrarDinle(){if(!aktifKelime)return;document.getElementById("duydum").textContent="";yonlendirVeSoyle(false);}
 // Sozlu yonlendirme: once yonergeyi soyle, sonra kelimeyi (kayitli ses ya da TTS), sonra dogrudan dinle.
@@ -769,6 +785,8 @@ if(t.target.closest&&(t.target.closest("#panel")||t.target.closest("#kutlama")||
 tiklamaIsle(t.clientX,t.clientY);}
 async function oyunuBaslat(bastan){
 document.getElementById("basla").style.display="none";
+// Ses politikasi: ses baglamini kullanici dokunusunda uyandir, yoksa cikis sessiz kalabilir
+try{var ac=window.__oynatCtx||(window.__oynatCtx=new (window.AudioContext||window.webkitAudioContext)());if(ac.state!=="running")await ac.resume().catch(function(){});}catch(_){}
 await panelDbAc();await panelKelimeleriYukle();
 if("speechSynthesis"in window){sesleriCoz();const w=new SpeechSynthesisUtterance(" ");w.volume=0;speechSynthesis.speak(w);}
 await mikrofonIzniAl();

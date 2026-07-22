@@ -11,6 +11,8 @@
 <meta name="apple-mobile-web-app-title" content="Bhulut'un Kule Savunmasi">
 <meta name="application-name" content="Bulut'un Kule Savunmasi">
 <link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
 <style>
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0;}
 html,body{height:100%;overflow:hidden;background:#7ec8ff;font-family:"Segoe UI",system-ui,sans-serif;color:#fff;}
@@ -114,6 +116,7 @@ Robot yok ettikce para kazanir, daha cok kule dikersin! Kuleye tekrar dokununca 
 <p><b>Ses:</b> Sol altta muzik (🎵) ve ses efektlerini (🔊) ayri ayri acip kapatabilirsin.</p>
 <button onclick="oyunuBaslat(false)">Basla</button>
 <button id="bastanBtn" onclick="oyunuBaslat(true)" style="display:none;background:#8d99ae;font-size:1rem;padding:12px 22px;">Baştan başla</button>
+<button id="kurBtn" onclick="uygulamayiKur()" style="display:none;background:#2ecc71;font-size:1rem;padding:12px 22px;">⬇️ Uygulama olarak yükle</button>
 </div>
 <div id="kutlama">
 <div class="buyuk" id="kutlamaEmoji">Tebrikler</div>
@@ -459,6 +462,17 @@ function ilerlemeYukle(){try{var v=parseInt(localStorage.getItem(ILERLEME_LS)||"
 function basToGuncelle(){try{var k=ilerlemeYukle();var bb=document.querySelector("#basla > button");var rb=document.getElementById("bastanBtn");
 if(k>0){if(bb)bb.textContent="Devam Et — Bolum "+(k+1);if(rb)rb.style.display="";}
 else{if(bb)bb.textContent="Basla";if(rb)rb.style.display="none";}}catch(_){}}
+/* ==== MASAUSTU / TABLET KURULUMU (PWA install) ==== */
+var kurulumIstemi=null;
+window.addEventListener("beforeinstallprompt",function(e){e.preventDefault();kurulumIstemi=e;var b=document.getElementById("kurBtn");if(b)b.style.display="";});
+window.addEventListener("appinstalled",function(){kurulumIstemi=null;var b=document.getElementById("kurBtn");if(b)b.style.display="none";});
+function zatenKurulu(){try{return window.matchMedia("(display-mode: standalone)").matches||window.matchMedia("(display-mode: fullscreen)").matches||window.navigator.standalone===true;}catch(_){return false;}}
+async function uygulamayiKur(){
+ if(!kurulumIstemi){alert("Yükleme secenegi su an kullanilamiyor.\n\nChrome/Edge adres cubugunun sagindaki yukleme simgesine ya da menude \"Uygulamayi yukle\" secenegine bakin.");return;}
+ var b=document.getElementById("kurBtn");if(b)b.disabled=true;
+ try{kurulumIstemi.prompt();await kurulumIstemi.userChoice;}catch(_){}
+ kurulumIstemi=null;if(b){b.disabled=false;b.style.display="none";}
+}
 function istatOku(){try{return JSON.parse(localStorage.getItem(ISTAT_LS)||"{}");}catch(_){return {};}}
 function istatYaz(o){try{localStorage.setItem(ISTAT_LS,JSON.stringify(o));}catch(_){}}
 function istatKayit(kelime){var o=istatOku();var k=o[kelime];if(!k){k={deneme:0,basari:0,pes:0,puanlar:[],sonPuan:null,denemeler:[],ilk:0};o[kelime]=k;}if(!k.denemeler)k.denemeler=[];if(typeof k.ilk!=="number")k.ilk=0;return {o:o,k:k};}

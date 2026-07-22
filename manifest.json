@@ -1,14 +1,22 @@
 {
+    "id": "/BulutOyun/",
     "name": "Bulut'un Robot Macerasi",
     "short_name": "BulutOyun",
     "description": "Bulut icin konusma terapisi 3D robot oyunu",
+    "lang": "tr",
+    "dir": "ltr",
     "start_url": "/BulutOyun/BulutOyunTD.html",
     "scope": "/BulutOyun/",
-    "display": "fullscreen",
+    "display_override": ["fullscreen", "standalone"],
+    "display": "standalone",
     "orientation": "landscape",
     "background_color": "#7ec8ff",
     "theme_color": "#5aa9e6",
+    "categories": ["education", "games", "kids"],
     "icons": [
-        { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+        { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+        { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+        { "src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+        { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
     ]
 }

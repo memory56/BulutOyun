@@ -117,7 +117,7 @@ Robot yok ettikce para kazanir, daha cok kule dikersin! Kuleye tekrar dokununca 
 <button onclick="oyunuBaslat(false)">Basla</button>
 <button id="bastanBtn" onclick="oyunuBaslat(true)" style="display:none;background:#8d99ae;font-size:1rem;padding:12px 22px;">Baştan başla</button>
 <button id="kurBtn" onclick="uygulamayiKur()" style="display:none;background:#2ecc71;font-size:1rem;padding:12px 22px;">⬇️ Uygulama olarak yükle</button>
-<div style="margin-top:10px;font-size:.75rem;color:#8d99ae;">sürüm 22</div>
+<div style="margin-top:10px;font-size:.75rem;color:#8d99ae;">sürüm 23</div>
 </div>
 <div id="kutlama">
 <div class="buyuk" id="kutlamaEmoji">Tebrikler</div>
@@ -494,20 +494,26 @@ if(typeof puan==="number"&&puan>0){r.k.sonPuan=Math.round(puan);r.k.puanlar.push
 istatYaz(r.o);}
 function istatPes(kelime){if(!kelime)return;var r=istatKayit(kelime);r.k.pes++;istatYaz(r.o);}
 var _sonPuan=null;
-function telaffuzBasarili(){istatSonuc(aktifKelime,true,_sonPuan,deneme+1);document.getElementById("kelime").textContent="🎉";document.getElementById("durum").innerHTML="Harika!";
-seslendir("Aferin!",null);
+function telaffuzBasarili(){istatSonuc(aktifKelime,true,_sonPuan,deneme+1);document.getElementById("kelime").textContent="🎉";document.getElementById("durum").innerHTML="Aferin!";
 const cb=basariCb;aktifKelime=null;basariCb=null;
-setTimeout(()=>{telaffuzPanelKapat();if(cb)cb();},900);}
+var kapandi=false,t0=Date.now();
+function bitir(){if(kapandi)return;kapandi=true;telaffuzPanelKapat();if(cb)cb();}
+// Ses bitince kapat (kayit uzun olabilir), en az 900ms ekranda kalsin, 10sn emniyet
+seslendir("Aferin!",function(){setTimeout(bitir,Math.max(250,900-(Date.now()-t0)));});
+setTimeout(bitir,10000);}
 // 3 deneme sonunda: ceza uygula, testi gec, oyun devam etsin
 function telaffuzPesEt(){
 istatPes(aktifKelime);
 skor=Math.max(0,skor-CEZA_PARA);
 document.getElementById("skor").textContent=skor;
 document.getElementById("kelime").textContent="🙂";
-seslendir("Önemli değil, sonra yine deneriz.",null);
 document.getElementById("durum").innerHTML="Sonra tekrar deneriz. (-"+CEZA_PARA+" para)";
 const cb=basariCb;aktifKelime=null;basariCb=null;
-setTimeout(()=>{telaffuzPanelKapat();if(cb)cb();},1100);
+var kapandi2=false,t02=Date.now();
+function bitir2(){if(kapandi2)return;kapandi2=true;telaffuzPanelKapat();if(cb)cb();}
+// Ses bitince kapat (kayit uzun olabilir), en az 1100ms ekranda kalsin, 10sn emniyet
+seslendir("Önemli değil, sonra yine deneriz.",function(){setTimeout(bitir2,Math.max(250,1100-(Date.now()-t02)));});
+setTimeout(bitir2,10000);
 }
 function telaffuzBasarisiz(gercek){if(gercek)istatSonuc(aktifKelime,false,_sonPuan);deneme++;
 if(deneme>=MAX_DENEME){telaffuzPesEt();return;}

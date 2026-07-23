@@ -117,7 +117,7 @@ Robot yok ettikce para kazanir, daha cok kule dikersin! Kuleye tekrar dokununca 
 <button onclick="oyunuBaslat(false)">Basla</button>
 <button id="bastanBtn" onclick="oyunuBaslat(true)" style="display:none;background:#8d99ae;font-size:1rem;padding:12px 22px;">Baştan başla</button>
 <button id="kurBtn" onclick="uygulamayiKur()" style="display:none;background:#2ecc71;font-size:1rem;padding:12px 22px;">⬇️ Uygulama olarak yükle</button>
-<div style="margin-top:10px;font-size:.75rem;color:#8d99ae;">sürüm 25</div>
+<div style="margin-top:10px;font-size:.75rem;color:#8d99ae;">sürüm 26</div>
 </div>
 <div id="kutlama">
 <div class="buyuk" id="kutlamaEmoji">Tebrikler</div>
@@ -613,7 +613,7 @@ function taniyiciKur(){taniyici=new TanimaAPI();taniyici.lang="tr-TR";taniyici.i
 taniyici.onresult=e=>{sonucGeldi=true;var alts=[];try{for(var i=0;i<e.results[0].length;i++)alts.push(e.results[0][i].transcript||"");}catch(_){}
 var enOlasi=alts[0]||"";
 document.getElementById("duydum").textContent="duydugum: "+enOlasi;
-var uydu=aktifKelime&&alts.some(function(a){return esMetin(a)===esMetin(aktifKelime);});
+var uydu=aktifKelime&&alts.some(function(a){return yakinMi(a,aktifKelime);});
 if(uydu)telaffuzBasarili();
 else if(aktifKelime)telaffuzBasarisiz(true);};
 taniyici.onerror=ev=>{if(izinDenemesi){izinDenemesi=false;try{taniyici.stop();}catch(_){}
@@ -692,8 +692,11 @@ async function azureIleDinle(){
   taniLog("Azure durum: "+ySerbest.status);
   var cozuldu=!!(duyulan && (jsSerbest.RecognitionStatus?jsSerbest.RecognitionStatus==="Success":true));
   _sonPuan=null;
-var metinTuttu=(esMetin(duyulan)===esMetin(aktifKelime));
-taniLog("duy:'"+duyulan+"' coz "+cozuldu+" metin:"+(metinTuttu?"tuttu":"tutmadi"));
+var adaylar=[];try{(jsSerbest.NBest||[]).forEach(function(n){["Lexical","Display","ITN","MaskedITN"].forEach(function(alan){if(n&&n[alan])adaylar.push(n[alan]);});});}catch(_){}
+if(jsSerbest.DisplayText)adaylar.push(jsSerbest.DisplayText);
+if(duyulan)adaylar.push(duyulan);
+var metinTuttu=adaylar.some(function(a){return yakinMi(a,aktifKelime);});
+taniLog("duy:'"+duyulan+"' aday:"+adaylar.length+" coz "+cozuldu+" metin:"+(metinTuttu?"tuttu":"tutmadi"));
 var dd=document.getElementById("duydum");if(dd)dd.textContent="duydugum: "+duyulan;
   if(!aktifKelime){ /* iptal edildi */ }
     else if(!cozuldu){
@@ -757,6 +760,25 @@ try{taniyici.start();}catch(_){dinliyor=false;}}
 function sadelestir(s){return s.toLocaleLowerCase("tr").replace(/[.,!?;:]/g,"").replace(/\s+/g," ").trim();}
 // Bilesik kelimelerde STT bazen bosluk ekler ("gok bilim" ~ "gokbilim"); bosluga duyarsiz karsilastir.
 function esMetin(s){return sadelestir(s).replace(/\s+/g,"");}
+// Turkce karakterleri sadelestir: STT bazen "gokbilim"/"gökbilim", "sise"/"şişe" gibi farklar dondurur.
+function esAscii(s){return esMetin(s)
+  .replace(/[çÇ]/g,"c").replace(/[ğĞ]/g,"g").replace(/[ıİ]/g,"i").replace(/[îÎ]/g,"i")
+  .replace(/[öÖ]/g,"o").replace(/[şŞ]/g,"s").replace(/[üÜ]/g,"u").replace(/[âÂ]/g,"a")
+  .replace(/['’`\-_]/g,"");}
+function lev(a,b){var m=a.length,n=b.length,d=[],i,j;
+for(i=0;i<=m;i++)d[i]=[i];for(j=0;j<=n;j++)d[0][j]=j;
+for(i=1;i<=m;i++)for(j=1;j<=n;j++)d[i][j]=Math.min(d[i-1][j]+1,d[i][j-1]+1,d[i-1][j-1]+(a[i-1]===b[j-1]?0:1));
+return d[m][n];}
+// Toleransli eslesme: kucuk harf farklarini affeder, uzun kelimede daha comert davranir.
+var TOLERANS_ORAN=0.30;
+function yakinMi(soylenen,hedef){
+var s=esAscii(soylenen),h=esAscii(hedef);
+if(!s||!h)return false;
+if(s===h)return true;
+if(h.length>=4&&(s.indexOf(h)>=0||h.indexOf(s)>=0))return true;   // "kedi" ~ "kedi diye"
+var uz=Math.max(s.length,h.length);
+var izin=uz<=4?1:(uz<=7?2:Math.max(2,Math.round(uz*TOLERANS_ORAN)));
+return lev(s,h)<=izin;}
 // TAM TELAFFUZ: sadece kucuk/buyuk harf ve noktalama normalize edilir; harf farki KABUL EDILMEZ.
 // Konusma tanima alternatiflerinden herhangi biri hedefle birebir esitse dogru sayilir.
 // Tanima modu: tam eslesme (normalize edilmis) kullaniliyor; toleransli eslesme kaldirildi.

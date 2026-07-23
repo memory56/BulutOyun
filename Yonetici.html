@@ -107,7 +107,7 @@ display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
 
 <div class="rapor" id="yonergeKart" style="border-color:#9b59b6;">
 <h2>🗣️ Yönerge Sesleri (kendi sesin)</h2>
-<p style="font-size:.8rem;color:#5a6b7b;margin:6px 0 4px;">Oyunun çocuğa söylediği kalıp cümleler. Kaydetmezseniz cihazın robot sesi (TTS) kullanılır; bu tablette TTS çalışmadığı için <b>kaydetmeniz önerilir</b>. Kaydı olan yönergeler oyunda önce tercih edilir.</p>
+<p style="font-size:.8rem;color:#5a6b7b;margin:6px 0 4px;">Oyunun çocuğa söylediği kalıp cümleler. Kaydetmezseniz cihazın robot sesi (TTS) kullanılır; bu tablette TTS çalışmadığı için <b>kaydetmeniz önerilir</b>. Kaydı olan yönergeler oyunda önce tercih edilir. <b>Övgüler</b> (Aferin / Bravo / Tebrikler / Harika / Çok güzel / Süpersin) ve <b>teselliler</b> (Önemli değil / Olsun / Sorun değil / Boş ver) her seferinde değişir — yalnızca <b>kaydettikleriniz</b> arasından rastgele seçilir, aynısı üst üste gelmez.</p>
 <div id="yonergeListe"></div>
 </div>
 
@@ -129,7 +129,15 @@ const YONERGE_METINLER=[
  "Beni dinle, sonra sen söyle:",
  "Haydi birlikte söyleyelim:",
  "Aferin!",
+ "Bravo!",
+ "Tebrikler!",
+ "Harika!",
+ "Çok güzel!",
+ "Süpersin!",
  "Önemli değil, sonra yine deneriz.",
+ "Olsun, birazdan tekrar deneriz.",
+ "Sorun değil, sonra yine bakarız.",
+ "Boş ver, birlikte yine çalışırız.",
  "Aferin Bulut! Tum bolumleri bitirdin. Harikasin!"
 ];
 let db=null;

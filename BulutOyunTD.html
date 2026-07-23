@@ -117,7 +117,7 @@ Robot yok ettikce para kazanir, daha cok kule dikersin! Kuleye tekrar dokununca 
 <button onclick="oyunuBaslat(false)">Basla</button>
 <button id="bastanBtn" onclick="oyunuBaslat(true)" style="display:none;background:#8d99ae;font-size:1rem;padding:12px 22px;">Baştan başla</button>
 <button id="kurBtn" onclick="uygulamayiKur()" style="display:none;background:#2ecc71;font-size:1rem;padding:12px 22px;">⬇️ Uygulama olarak yükle</button>
-<div style="margin-top:10px;font-size:.75rem;color:#8d99ae;">sürüm 28</div>
+<div style="margin-top:10px;font-size:.75rem;color:#8d99ae;">sürüm 31</div>
 </div>
 <div id="kutlama">
 <div class="buyuk" id="kutlamaEmoji">Tebrikler</div>
@@ -333,15 +333,25 @@ function robotDogur(){const b=BOLUMLER[bolumIdx],grup=robotYap(dalgaRengi);grup.
 robotlar.push({grup,hp:b.can,maxHp:b.can,hiz:b.hiz,hedef:1,dying:false});}
 function dalgaRobotSayisi(w){const DALGA_ADET=[10,15,20];return DALGA_ADET[w]||DALGA_ADET[DALGA_ADET.length-1];}
 function dalgaBaslat(w){dalgaNo=w;dalgaKalan=dalgaRobotSayisi(w);dogumSayaci=(w===0?3.0:1.0);dalgaRengi=DALGA_RENKLERI[w%DALGA_RENKLERI.length];dalgaBekleme=0;dalgaGuncelle();kalanGuncelle();mesajGoster("Dalga "+(w+1)+"/"+dalgaSayisi+" geliyor!");}
+// Kelime destesi: bolumdeki kelimeler karistirilir ve TEKER TEKER dagitilir.
+// Boylece tum kelimeler bir kez cikmadan hicbiri tekrar etmez (hem dalga hem bolum sonu icin ortak).
+var kelimeDeste=[],desteBolum=-1;
+function desteYenile(bidx){
+var h=bolumKelimeleri(bidx).slice();
+for(var i=h.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=h[i];h[i]=h[j];h[j]=t;}
+kelimeDeste=h;desteBolum=bidx;}
+function kelimeCek(bidx){
+if(desteBolum!==bidx||!kelimeDeste.length)desteYenile(bidx);
+return kelimeDeste.shift();}
 // Dalga baslamadan once tek sozcuk testi
 function dalgaSozcukVeBaslat(w){
-const havuz=bolumKelimeleri(bolumIdx);
-const kelime=havuz[Math.floor(Math.random()*havuz.length)];
+const kelime=kelimeCek(bolumIdx);
 durakla=true;
 telaffuzSor(kelime,1,1,()=>{durakla=false;dalgaBaslat(w);},null);
 }
 function dalgaGuncelle(){const el=document.getElementById("dalgaHud");if(el)el.textContent=(dalgaNo+1)+"/"+dalgaSayisi;}
-function bolumBaslat(){ilerlemeKaydet();robotlar.forEach(r=>scene.remove(r.grup));robotlar=[];
+function bolumBaslat(){ilerlemeKaydet();desteBolum=-1;   // her bolumde kelime destesi yeniden karisir
+robotlar.forEach(r=>scene.remove(r.grup));robotlar=[];
 mermiler.forEach(b=>scene.remove(b.mesh));mermiler=[];
 dalgaSayisi=3;dalgaNo=0;
 bolumToplamRobot=0;for(let w2=0;w2<dalgaSayisi;w2++){bolumToplamRobot+=dalgaRobotSayisi(w2);}
@@ -425,12 +435,13 @@ let sinavKelimeler=[],sinavIdx=0;
 // Bolum sonu: dalga oncesi sozcuk prosesinin AYNISI, arka arkaya 3 defa. Ayri panel/Devam yok.
 function bolumSonuSinav(){
 document.getElementById("kutlama").classList.remove("gor","sadece-devam");
-const havuz=bolumKelimeleri(bolumIdx).slice();
+const toplamKelime=bolumKelimeleri(bolumIdx).length;
 sinavKelimeler=[];
-for(let i=0;i<3;i++){
-if(!havuz.length)havuz.push(...bolumKelimeleri(bolumIdx));
-const idx=Math.floor(Math.random()*havuz.length);
-sinavKelimeler.push(havuz.splice(idx,1)[0]);
+var koruma=0;
+while(sinavKelimeler.length<3 && koruma++<60){
+const k=kelimeCek(bolumIdx);
+if(toplamKelime>=3 && sinavKelimeler.indexOf(k)>=0){kelimeDeste.push(k);continue;}  // ayni kelime tekrar etmesin
+sinavKelimeler.push(k);
 }
 sinavIdx=0;sinavSonraki();}
 function sinavSonraki(){
@@ -457,8 +468,9 @@ document.getElementById("durum").textContent="";
 document.getElementById("duydum").textContent="";
 document.getElementById("panel").classList.add("acik");
 muzikDurdur();
+try{mikAkisAl().catch(function(){});}catch(_){}   // mikrofonu simdiden hazirla: kelime bitince beklemesin
 setTimeout(function(){if(_n!==soruNesil)return;kelimeyiSesliOku();},300);}
-function telaffuzPanelKapat(){soruNesil++;sesDur();try{if(taniyici)taniyici.stop();}catch(_){}
+function telaffuzPanelKapat(){soruNesil++;sesDur();mikKapat();try{if(taniyici)taniyici.stop();}catch(_){}
 document.getElementById("panel").classList.remove("acik");
 if(muzikAcik&&!elDurdurma&&oyunAktif)muzikBaslat();}
 /* ==== ILERLEME KAYDI + KELIME ISTATISTIGI (localStorage) ==== */
@@ -499,25 +511,47 @@ if(typeof puan==="number"&&puan>0){r.k.sonPuan=Math.round(puan);r.k.puanlar.push
 istatYaz(r.o);}
 function istatPes(kelime){if(!kelime)return;var r=istatKayit(kelime);r.k.pes++;istatYaz(r.o);}
 var _sonPuan=null;
-function telaffuzBasarili(){istatSonuc(aktifKelime,true,_sonPuan,deneme+1);document.getElementById("kelime").textContent="🎉";document.getElementById("durum").innerHTML="Aferin!";
+// Basarida soylenen ovguler. Kaydi olanlar tercih edilir, ust uste ayni ovgu gelmez.
+var OVGULER=["Aferin!","Bravo!","Tebrikler!","Harika!","Çok güzel!","Süpersin!"];
+var sonOvgu="";
+function ovguSec(){
+var kayitli=OVGULER.filter(function(o){return kelimeKaydiBul(o);});
+var havuz=kayitli.length?kayitli:OVGULER;
+var d=havuz.filter(function(o){return o!==sonOvgu;});
+if(!d.length)d=havuz;
+var s=d[Math.floor(Math.random()*d.length)];sonOvgu=s;return s;}
+function telaffuzBasarili(){istatSonuc(aktifKelime,true,_sonPuan,deneme+1);document.getElementById("kelime").textContent="🎉";
+var ovgu=ovguSec();
+document.getElementById("durum").innerHTML=ovgu;
 const cb=basariCb;aktifKelime=null;basariCb=null;soruNesil++;
 var kapandi=false,t0=Date.now();
 function bitir(){if(kapandi)return;kapandi=true;telaffuzPanelKapat();if(cb)cb();}
 // Ses bitince kapat (kayit uzun olabilir), en az 900ms ekranda kalsin, 10sn emniyet
-seslendir("Aferin!",function(){setTimeout(bitir,Math.max(250,900-(Date.now()-t0)));});
+seslendir(ovgu,function(){setTimeout(bitir,Math.max(250,900-(Date.now()-t0)));});
 setTimeout(bitir,10000);}
 // 3 deneme sonunda: ceza uygula, testi gec, oyun devam etsin
+// Pes edildiginde soylenen teselliler. Ovgulerle ayni mantik: kayitli olanlar tercih edilir,
+// ayni cumle ust uste gelmez.
+var TESELLILER=["Önemli değil, sonra yine deneriz.","Olsun, birazdan tekrar deneriz.","Sorun değil, sonra yine bakarız.","Boş ver, birlikte yine çalışırız."];
+var sonTeselli="";
+function teselliSec(){
+var kayitli=TESELLILER.filter(function(o){return kelimeKaydiBul(o);});
+var havuz=kayitli.length?kayitli:TESELLILER;
+var d=havuz.filter(function(o){return o!==sonTeselli;});
+if(!d.length)d=havuz;
+var s=d[Math.floor(Math.random()*d.length)];sonTeselli=s;return s;}
 function telaffuzPesEt(){
 istatPes(aktifKelime);
 skor=Math.max(0,skor-CEZA_PARA);
 document.getElementById("skor").textContent=skor;
 document.getElementById("kelime").textContent="🙂";
-document.getElementById("durum").innerHTML="Sonra tekrar deneriz. (-"+CEZA_PARA+" para)";
+var teselli=teselliSec();
+document.getElementById("durum").innerHTML=teselli+" (-"+CEZA_PARA+" para)";
 const cb=basariCb;aktifKelime=null;basariCb=null;soruNesil++;
 var kapandi2=false,t02=Date.now();
 function bitir2(){if(kapandi2)return;kapandi2=true;telaffuzPanelKapat();if(cb)cb();}
 // Ses bitince kapat (kayit uzun olabilir), en az 1100ms ekranda kalsin, 10sn emniyet
-seslendir("Önemli değil, sonra yine deneriz.",function(){setTimeout(bitir2,Math.max(250,1100-(Date.now()-t02)));});
+seslendir(teselli,function(){setTimeout(bitir2,Math.max(250,1100-(Date.now()-t02)));});
 setTimeout(bitir2,10000);
 }
 function telaffuzBasarisiz(gercek){if(gercek)istatSonuc(aktifKelime,false,_sonPuan);deneme++;
@@ -629,7 +663,7 @@ document.getElementById("durum").innerHTML="Seni duyamadim, tekrar dinliyorum!";
 async function mikrofonIzniAl(){
 if(mikrofonReddedildi)return;
 if(!(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia)){return;}
-try{await mikAkisAl();}
+try{await mikAkisAl();mikKapat();}
 catch(_){mikrofonReddedildi=true;}
 if(TanimaAPI&&!taniyici)taniyiciKur();
 }
@@ -663,9 +697,14 @@ var mikAkis=null;
 function mikCanli(){try{return !!(mikAkis&&mikAkis.getAudioTracks().some(function(t){return t.readyState==="live";}));}catch(_){return false;}}
 async function mikAkisAl(){
  if(mikCanli())return mikAkis;
- mikAkis=await navigator.mediaDevices.getUserMedia({audio:true});
+ // echoCancellation KAPALI: acik oldugunda Android cihazin kendi hoparlor cikisini bastirip
+ // seslerin duyulmamasina yol acabiliyor.
+ try{mikAkis=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:true,autoGainControl:true}});}
+ catch(_){mikAkis=await navigator.mediaDevices.getUserMedia({audio:true});}
  return mikAkis;
 }
+// Mikrofonu birak: kutlama/bolum gecisi gibi ses calan anlarda mikrofon ACIK KALMAMALI.
+function mikKapat(){try{if(mikAkis)mikAkis.getTracks().forEach(function(t){t.stop();});}catch(_){}mikAkis=null;}
 async function azureKaydet(saniye){
  var akis=await mikAkisAl();
  var mime="";var secenekler=["audio/webm;codecs=opus","audio/webm","audio/ogg;codecs=opus","audio/mp4"];
@@ -810,6 +849,7 @@ clearTimeout(mesajGoster._t);mesajGoster._t=setTimeout(()=>m.classList.remove("g
 // ardindan otomatik sonraki bolume gec. Sadece son bolumde kutlama ekrani gosterilir.
 function bolumBitti(){
 const son=bolumIdx>=BOLUMLER.length-1;
+mikKapat();                       // kutlama sesi calarken mikrofon acik kalmasin
 durakla=true;duraklaBtnGoster(false);
 if(son){
 document.getElementById("devamBtn").style.display="none";

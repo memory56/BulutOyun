@@ -117,7 +117,7 @@ Robot yok ettikce para kazanir, daha cok kule dikersin! Kuleye tekrar dokununca 
 <button onclick="oyunuBaslat(false)">Basla</button>
 <button id="bastanBtn" onclick="oyunuBaslat(true)" style="display:none;background:#8d99ae;font-size:1rem;padding:12px 22px;">Baştan başla</button>
 <button id="kurBtn" onclick="uygulamayiKur()" style="display:none;background:#2ecc71;font-size:1rem;padding:12px 22px;">⬇️ Uygulama olarak yükle</button>
-<div style="margin-top:10px;font-size:.75rem;color:#8d99ae;">sürüm 27</div>
+<div style="margin-top:10px;font-size:.75rem;color:#8d99ae;">sürüm 28</div>
 </div>
 <div id="kutlama">
 <div class="buyuk" id="kutlamaEmoji">Tebrikler</div>
@@ -447,6 +447,7 @@ let soruNesil=0;
 const MAX_DENEME=3;
 function telaffuzSor(kelime,sira,toplam,onBasari){
 soruNesil++;var _n=soruNesil;
+buSoruYonerge=(sira===1);   // dizide yonerge sadece ILK kelimede; sonrakilerde dogrudan kelime
 aktifKelime=kelime;basariCb=onBasari;deneme=0;durakla=true;
 sinavKelimeler=(toplam>1)?sinavKelimeler:[];
 document.getElementById("kelime").textContent="🎧";
@@ -563,7 +564,7 @@ var bitti=false,zaman=null;
 // icinden baslatilan yeni play() reddedilip ses atlaniyor.
 function tamam(){if(bitti)return;bitti=true;if(zaman){clearTimeout(zaman);zaman=null;}
 if(benimNo!==seslendirmeNo)return;    // arada baska ses basladiysa bu akisi surdurme
-if(bitince)setTimeout(bitince,60);}
+if(bitince)setTimeout(bitince,30);}
 function guvenlik(ms){zaman=setTimeout(tamam,ms);}   // ses bir sekilde bitmezse akis yine de devam etsin
 const kayit=kelimeKaydiBul(metin);
 if(kayit){const o=document.getElementById("oynatici");
@@ -592,7 +593,8 @@ setTimeout(function(){
   speechSynthesis.speak(u);
  }catch(_){tamam();}
 },140);}
-function kelimeyiSesliOku(){if(aktifKelime)yonlendirVeSoyle(true);}
+var buSoruYonerge=true;
+function kelimeyiSesliOku(){if(aktifKelime)yonlendirVeSoyle(buSoruYonerge);}
 function tekrarDinle(){if(!aktifKelime)return;document.getElementById("duydum").textContent="";yonlendirVeSoyle(false);}
 // Sozlu yonlendirme: once yonergeyi soyle, sonra kelimeyi (kayitli ses ya da TTS), sonra dogrudan dinle.
 // Yazili metne gerek yok; cocuk duyup tekrar eder.
@@ -627,8 +629,7 @@ document.getElementById("durum").innerHTML="Seni duyamadim, tekrar dinliyorum!";
 async function mikrofonIzniAl(){
 if(mikrofonReddedildi)return;
 if(!(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia)){return;}
-try{const akis=await navigator.mediaDevices.getUserMedia({audio:true});
-akis.getTracks().forEach(t=>t.stop());}
+try{await mikAkisAl();}
 catch(_){mikrofonReddedildi=true;}
 if(TanimaAPI&&!taniyici)taniyiciKur();
 }
@@ -656,13 +657,19 @@ function yenidenOrnekle(data,girisOrn,hedefOrn){
  for(var i=0;i<yeni;i++){var idx=i*oran,i0=Math.floor(idx),i1=Math.min(i0+1,data.length-1),fr=idx-i0;cikti[i]=data[i0]*(1-fr)+data[i1]*fr;}
  return cikti;
 }
+// Mikrofon akisini ACIK TUT: her denemede yeniden acmak tablette birkac yuz ms gecikme
+// yaratiyordu ve cocuk konusmaya basladiginda uygulama henuz dinlemiyordu.
+var mikAkis=null;
+function mikCanli(){try{return !!(mikAkis&&mikAkis.getAudioTracks().some(function(t){return t.readyState==="live";}));}catch(_){return false;}}
+async function mikAkisAl(){
+ if(mikCanli())return mikAkis;
+ mikAkis=await navigator.mediaDevices.getUserMedia({audio:true});
+ return mikAkis;
+}
 async function azureKaydet(saniye){
- taniLog("mik izni isteniyor...");
- var akis=await navigator.mediaDevices.getUserMedia({audio:true});
- taniLog("mik acildi");
+ var akis=await mikAkisAl();
  var mime="";var secenekler=["audio/webm;codecs=opus","audio/webm","audio/ogg;codecs=opus","audio/mp4"];
  for(var i=0;i<secenekler.length;i++){try{if(window.MediaRecorder&&MediaRecorder.isTypeSupported(secenekler[i])){mime=secenekler[i];break;}}catch(_){}}
- taniLog("format: "+(mime||"varsayilan"));
  var kaydedici=mime?new MediaRecorder(akis,{mimeType:mime}):new MediaRecorder(akis);
  var parcalar=[];kaydedici.ondataavailable=function(e){if(e.data&&e.data.size)parcalar.push(e.data);};
  var durdu=new Promise(function(res){kaydedici.onstop=res;});
@@ -670,7 +677,6 @@ async function azureKaydet(saniye){
  await new Promise(function(r){setTimeout(r,saniye*1000);});
  try{kaydedici.stop();}catch(_){}
  await durdu;
- akis.getTracks().forEach(function(tr){tr.stop();});
  var blob=new Blob(parcalar,{type:mime||"audio/webm"});
  taniLog("kayit: "+parcalar.length+" parca, "+blob.size+" bayt");
  if(!parcalar.length||!blob.size)throw new Error("SES_YOK");

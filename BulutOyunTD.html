@@ -117,7 +117,7 @@ Robot yok ettikce para kazanir, daha cok kule dikersin! Kuleye tekrar dokununca 
 <button onclick="oyunuBaslat(false)">Basla</button>
 <button id="bastanBtn" onclick="oyunuBaslat(true)" style="display:none;background:#8d99ae;font-size:1rem;padding:12px 22px;">Baştan başla</button>
 <button id="kurBtn" onclick="uygulamayiKur()" style="display:none;background:#2ecc71;font-size:1rem;padding:12px 22px;">⬇️ Uygulama olarak yükle</button>
-<div style="margin-top:10px;font-size:.75rem;color:#8d99ae;">sürüm 26</div>
+<div style="margin-top:10px;font-size:.75rem;color:#8d99ae;">sürüm 27</div>
 </div>
 <div id="kutlama">
 <div class="buyuk" id="kutlamaEmoji">Tebrikler</div>
@@ -769,16 +769,22 @@ function lev(a,b){var m=a.length,n=b.length,d=[],i,j;
 for(i=0;i<=m;i++)d[i]=[i];for(j=0;j<=n;j++)d[0][j]=j;
 for(i=1;i<=m;i++)for(j=1;j<=n;j++)d[i][j]=Math.min(d[i-1][j]+1,d[i][j-1]+1,d[i-1][j-1]+(a[i-1]===b[j-1]?0:1));
 return d[m][n];}
-// Toleransli eslesme: kucuk harf farklarini affeder, uzun kelimede daha comert davranir.
-var TOLERANS_ORAN=0.30;
+// Toleransli eslesme — ilke: STT'nin takildigi yer genelde SONEKtir; yanlis telaffuz ise
+// kelimenin GOVDESINI degistirir. Bu yuzden sadece sondaki kucuk farklari kabul ediyoruz.
+function ortakOnek(a,b){var i=0;while(i<a.length&&i<b.length&&a[i]===b[i])i++;return i;}
 function yakinMi(soylenen,hedef){
 var s=esAscii(soylenen),h=esAscii(hedef);
 if(!s||!h)return false;
-if(s===h)return true;
-if(h.length>=4&&(s.indexOf(h)>=0||h.indexOf(s)>=0))return true;   // "kedi" ~ "kedi diye"
-var uz=Math.max(s.length,h.length);
-var izin=uz<=4?1:(uz<=7?2:Math.max(2,Math.round(uz*TOLERANS_ORAN)));
-return lev(s,h)<=izin;}
+if(s===h)return true;                                    // birebir (Turkce/bosluk farklari zaten sadelesti)
+if(h.length>=4&&s.indexOf(h)>=0)return true;             // "kedi diye" icinde tam "kedi" gecmis
+var kisa=Math.min(s.length,h.length),uzun=Math.max(s.length,h.length);
+if(uzun<5)return false;                                  // kisa kelimelerde birebir istiyoruz
+var d=lev(s,h);
+if(d>2)return false;                                     // 2 harften fazla fark -> baska kelime
+var p=ortakOnek(s,h);
+// Fark govdede mi? Ortak onek kisaysa telaffuz hatasidir: "gemici" vs "gumeci" (onek 1) -> RED
+if(p<3||p<kisa-2)return false;
+return true;}
 // TAM TELAFFUZ: sadece kucuk/buyuk harf ve noktalama normalize edilir; harf farki KABUL EDILMEZ.
 // Konusma tanima alternatiflerinden herhangi biri hedefle birebir esitse dogru sayilir.
 // Tanima modu: tam eslesme (normalize edilmis) kullaniliyor; toleransli eslesme kaldirildi.
